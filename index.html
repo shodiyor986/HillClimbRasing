@@ -90,17 +90,14 @@
   <div id="gameScreens"></div>
 
 <script>
-  // ============================================================
-  // MUHIM: Apps Script deploy qilingandan keyin chiqqan URL ni shu yerga yozing
-  // (https://script.google.com/macros/s/.../exec)
-  // ============================================================
-  var API_URL = 'SHEET_ID: '1q2xj1_Pn-Au3QtMsmNOLI6YAJQKIrO9Q_mkX0AosWFM'';
+  // Apps Script manzili (A.gs deploy URL)
+  var API_URL = 'https://script.google.com/macros/s/AKfycbx1lmkyETJ1YYCpU3cAylORiptKxfcCIIH6m2bzmVFOuBIw4ADoZ2iCPPA2PdTQF7dd_Q/exec';
 
   var TG = window.Telegram && window.Telegram.WebApp;
   if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
 
   // Telegram foydalanuvchi ma'lumoti (imzolangan). Server shu orqali foydalanuvchini aniqlaydi
-  window.APP = { initData: (TG && TG.initData) || 'https://script.google.com/macros/s/AKfycbx1lmkyETJ1YYCpU3cAylORiptKxfcCIIH6m2bzmVFOuBIw4ADoZ2iCPPA2PdTQF7dd_Q/exec' };
+  window.APP = { initData: (TG && TG.initData) || '' };
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) {
@@ -110,8 +107,8 @@
   };
   window.esc = esc;
 
-  // Serverga so'rov (Google Apps Script API). Content-Type berilmaydi, shunda brauzer
-  // oldindan tekshiruv (CORS preflight) yubormaydi va Apps Script ishlaydi
+  // Serverga so'rov. Content-Type berilmaydi, shunda brauzer oldindan tekshiruv
+  // (CORS preflight) yubormaydi va Apps Script ishlaydi
   function gcall(fn) {
     var args = Array.prototype.slice.call(arguments, 1);
     return fetch(API_URL, {
@@ -238,8 +235,8 @@
         box.innerHTML = html;
         var scripts = Array.prototype.slice.call(box.querySelectorAll('script'));
         scripts.forEach(function (s) { s.parentNode.removeChild(s); });
-        while (box.firstChild) screen.appendChild(box.firstChild); // HTML va style joylanadi
-        scripts.forEach(function (old) {                           // script alohida ishga tushiriladi
+        while (box.firstChild) screen.appendChild(box.firstChild);
+        scripts.forEach(function (old) {
           var s = document.createElement('script');
           s.textContent = old.textContent;
           document.body.appendChild(s);
@@ -278,9 +275,6 @@
   if (!APP.initData) {
     $('uname').textContent = 'Telegram aniqlanmadi';
     toast('Iltimos, botni Telegram ichidan oching');
-  } else if (API_URL.indexOf('SHU_YERGA') === 0) {
-    $('uname').textContent = 'API_URL yozilmagan';
-    toast('index.html ichida API_URL ni yozing');
   } else {
     refresh();
   }
