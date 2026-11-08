@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>O'yin Bot</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -36,6 +39,8 @@
     .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #2b3150;
              padding: 10px 16px; border-radius: 12px; z-index: 60; max-width: 90%; text-align: center; }
     .game-screen { position: fixed; inset: 0; background: var(--bg); z-index: 30; overflow: auto; padding: 14px; }
+    .err { background: #3a1f2b; border: 1px solid #a33; color: #ffb3b3; border-radius: 12px; padding: 12px;
+           margin: 12px 14px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -47,6 +52,11 @@
     </div>
     <div class="coins">🪙 <span id="ucoins">0</span></div>
   </header>
+
+  <div class="err" id="errbox" hidden>
+    <div id="errtext"></div>
+    <button class="btn" style="margin-top:10px" onclick="retryLoad()">🔄 Qayta urinish</button>
+  </div>
 
   <!-- VAZIFALAR -->
   <section class="page" id="p-tasks">
@@ -74,9 +84,9 @@
   </section>
 
   <nav>
-    <button data-page="tasks"><span class="ic">✅</span>Vazifalar</button>
-    <button data-page="games" class="center"><span class="ic">🎮</span>O‘yinlar</button>
-    <button data-page="profile"><span class="ic">👤</span>Profil</button>
+    <button data-page="tasks" onclick="showPage('tasks')"><span class="ic">✅</span>Vazifalar</button>
+    <button data-page="games" class="center" onclick="showPage('games')"><span class="ic">🎮</span>O‘yinlar</button>
+    <button data-page="profile" onclick="showPage('profile')"><span class="ic">👤</span>Profil</button>
   </nav>
 
   <div class="overlay" id="adbox" hidden>
@@ -91,15 +101,45 @@
 
 <script>
   // Apps Script manzili (A.gs deploy URL)
-  var API_URL = 'https://script.google.com/macros/s/AKfycbx1lmkyETJ1YYCpU3cAylORiptKxfcCIIH6m2bzmVFOuBIw4ADoZ2iCPPA2PdTQF7dd_Q/exec';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbx3zSWcel7SjsKFi3b6tUZOza-Y7FaVFesYB2-4OvN7rRZeKjwohkJ93wuRCNAUGGCp/exec';
 
+  var $ = function (id) { return document.getElementById(id); };
+
+  // Kutilmagan xato bo'lsa, ekranda ko'rsatadi (jim qolib ketmaydi)
+  window.onerror = function (msg) {
+    try { showError('Xato: ' + msg); } catch (e) {}
+  };
+  window.onunhandledrejection = function (ev) {
+    try { showError('Xato: ' + (ev && ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); } catch (e) {}
+  };
+
+  function showError(text) {
+    $('uname').textContent = 'Xato';
+    $('errtext').textContent = '⚠️ ' + text;
+    $('errbox').hidden = false;
+  }
+  function hideError() { $('errbox').hidden = true; }
+
+  // ---------- Telegram ma'lumoti ----------
   var TG = window.Telegram && window.Telegram.WebApp;
   if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
 
-  // Telegram foydalanuvchi ma'lumoti (imzolangan). Server shu orqali foydalanuvchini aniqlaydi
-  window.APP = { initData: (TG && TG.initData) || '' };
+  function initDataFromHash() {
+    try {
+      var h = String(location.hash || '').replace(/^#/, '');
+      var parts = h.split('&');
+      for (var i = 0; i < parts.length; i++) {
+        var k = parts[i].indexOf('=');
+        if (k > 0 && parts[i].slice(0, k) === 'tgWebAppData') {
+          return decodeURIComponent(parts[i].slice(k + 1));
+        }
+      }
+    } catch (e) {}
+    return '';
+  }
 
-  var $ = function (id) { return document.getElementById(id); };
+  window.APP = { initData: (TG && TG.initData) || initDataFromHash() || '' };
+
   var esc = function (s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
@@ -107,17 +147,27 @@
   };
   window.esc = esc;
 
-  // Serverga so'rov. Content-Type berilmaydi, shunda brauzer oldindan tekshiruv
-  // (CORS preflight) yubormaydi va Apps Script ishlaydi
+  // ---------- Serverga so'rov ----------
+  // Content-Type berilmaydi: brauzer oldindan tekshiruv (preflight) yubormaydi, Apps Script ishlaydi
   function gcall(fn) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ fn: fn, args: args })
-    }).then(function (r) { return r.json(); })
-      .then(function (j) {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    var opts = { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(API_URL, opts)
+      .then(function (r) { return r.text(); })
+      .then(function (txt) {
+        clearTimeout(timer);
+        var j;
+        try { j = JSON.parse(txt); }
+        catch (e) { throw new Error('Server noto\'g\'ri javob berdi. Apps Script yangi versiya deploy qilinganini tekshiring'); }
         if (!j.ok) throw new Error(j.error || 'Server xatosi');
         return j.data;
+      }, function (e) {
+        clearTimeout(timer);
+        if (e && e.name === 'AbortError') throw new Error('Server javob bermadi. Qayta urinib ko\'ring');
+        throw new Error('Internet yoki server bilan aloqa yo\'q (' + (e && e.message ? e.message : 'xato') + ')');
       });
   }
   window.gcall = gcall;
@@ -133,13 +183,27 @@
 
   // ---------- Ma'lumotlarni yuklash ----------
   var DATA = null;
+  var loading = false;
+
   function refresh() {
+    if (loading) return Promise.resolve();
+    loading = true;
     return gcall('getAppData', APP.initData).then(function (d) {
       DATA = d;
+      hideError();
       render();
-    }).catch(function (e) { toast('⚠️ ' + e.message); });
+    }).catch(function (e) {
+      if (!DATA) showError(e.message); else toast('⚠️ ' + e.message);
+    }).then(function () { loading = false; });
   }
   window.refreshApp = refresh;
+
+  function retryLoad() {
+    hideError();
+    $('uname').textContent = 'Yuklanmoqda…';
+    refresh();
+  }
+  window.retryLoad = retryLoad;
 
   function render() {
     if (!DATA) return;
@@ -206,15 +270,12 @@
   // ---------- Sahifalar ----------
   function showPage(p) {
     document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('active', x.id === 'p-' + p); });
-    document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('active', x.dataset.page === p); });
+    document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-page') === p); });
   }
-  document.querySelectorAll('nav button').forEach(function (b) {
-    b.onclick = function () { showPage(b.dataset.page); };
-  });
+  window.showPage = showPage;
 
   // ---------- O'yin fayllarini avtomatik yuklash ----------
   // Games jadvalidagi "file" ustuni (masalan B1) bo'yicha B1.html yuklanadi.
-  // Yangi o'yin qo'shilsa, bosh sahifada avtomatik paydo bo'ladi.
   var loaded = {};
 
   function loadGame(g) {
@@ -227,7 +288,7 @@
 
     loaded[g.id] = fetch(g.file + '.html?v=' + Date.now())
       .then(function (r) {
-        if (!r.ok) throw new Error(g.file + '.html topilmadi');
+        if (!r.ok) throw new Error(g.file + '.html topilmadi (GitHub\'ga yuklanganini tekshiring)');
         return r.text();
       })
       .then(function (html) {
@@ -253,7 +314,9 @@
   function openGame(id) {
     var g = DATA && DATA.games.filter(function (x) { return x.id === id; })[0];
     if (!g) { toast('O‘yin topilmadi'); return; }
+    toast('O‘yin yuklanmoqda…');
     loadGame(g).then(function () {
+      $('toast').hidden = true;
       $('screen-' + id).hidden = false;
       var api = window['game_' + id];
       if (api && api.open) api.open();
