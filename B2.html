@@ -1,0 +1,398 @@
+<!-- O'YIN MA'LUMOTI: index.html shu yerdan nom, belgi va narxni o'qiydi.
+     data-id Google Sheets dagi Games jadvalidagi id bilan bir xil bo'lishi kerak -->
+<div class="game-info" hidden
+     data-id="xo"
+     data-name="Krestik-Nolik"
+     data-icon="❌"
+     data-desc="2 kishilik. 3 tasi bir qatorga tizilsa g‘alaba!"
+     data-cost="2"
+     data-prize="3"></div>
+
+<style>
+  #xo { color: #fff; max-width: 520px; margin: 0 auto; padding: 12px 0 28px; position: relative; }
+  #xo .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  #xo .top .btn { padding: 8px 12px; font-size: 14px; }
+  #xo .ttl { font-weight: 800; font-size: 17px; }
+  #xo .btn.ghost { background: #2b3150; }
+  #xo .btn.red { background: #c62f4a; }
+  #xo .btn.big { font-size: 17px; padding: 13px 20px; }
+  #xo .banner { text-align: center; font-weight: 700; font-size: 16px; margin: 6px 0 2px; min-height: 22px; }
+  #xo .last { text-align: center; color: #9aa3c7; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  #xo .tbar { height: 6px; border-radius: 4px; background: #222a48; overflow: hidden; margin-bottom: 10px; }
+  #xo .tbar b { display: block; height: 100%; width: 100%; background: #43a047; transition: width .4s linear, background .3s; }
+  #xo .center { text-align: center; }
+  #xo .panel { background: #1a1f35; border-radius: 14px; padding: 14px; margin-top: 12px; }
+  #xo .panel h4 { margin-bottom: 8px; }
+  #xo .rules { font-size: 13px; color: #b8c0e0; line-height: 1.7; margin-bottom: 12px; }
+  #xo .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #141830; padding: 12px;
+               border-radius: 22px; box-shadow: 0 8px 24px #000a; margin: 8px auto; max-width: 380px; }
+  #xo .cell { aspect-ratio: 1; border: 0; border-radius: 16px; background: #1f2545; cursor: default; padding: 0;
+              display: flex; align-items: center; justify-content: center; transition: transform .1s, background .2s; }
+  #xo .cell.legal { background: #2a3160; box-shadow: inset 0 0 0 2px #7c5cff66; cursor: pointer; }
+  #xo .cell.legal:active { transform: scale(.93); }
+  #xo .cell.last { box-shadow: inset 0 0 0 3px #ffeb3b; }
+  #xo .cell.win { background: #2e5a36; box-shadow: 0 0 18px #66bb6a, inset 0 0 0 2px #66bb6a; }
+  #xo .mk { font-size: min(19vw, 88px); font-weight: 900; line-height: 1; font-family: system-ui, sans-serif; }
+  #xo .mk.x { color: #ff5252; text-shadow: 0 0 14px #ff525299; }
+  #xo .mk.o { color: #4fc3f7; text-shadow: 0 0 14px #4fc3f799; }
+  #xo .mk.pop { animation: xoPop .28s ease-out; }
+  #xo .mk.ghost { opacity: .45; }
+  @keyframes xoPop { from { transform: scale(.2) rotate(-25deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+  #xo .pl { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px;
+            background: #141830; margin-bottom: 6px; border: 2px solid transparent; }
+  #xo .pl.turn { border-color: var(--c); box-shadow: 0 0 14px var(--c); }
+  #xo .pl.slot { border: 2px dashed #39406a; color: #6f78a3; }
+  #xo .pl em { color: #9aa3c7; font-style: normal; font-size: 12px; }
+  #xo .badge { display: inline-block; width: 22px; font-weight: 900; margin-right: 8px; text-align: center; }
+  #xo .wo { position: fixed; inset: 0; background: #000b; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #xo .wo .box { background: #1a1f35; border-radius: 20px; padding: 24px; text-align: center; max-width: 340px; width: 100%; }
+  #xo .wo .big { font-size: 56px; }
+  #xo .rain { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 90; }
+  #xo .rain span { position: absolute; top: -30px; font-size: 26px; animation: xoFall linear forwards; }
+  @keyframes xoFall { to { transform: translateY(110vh) rotate(360deg); } }
+</style>
+
+<div id="xo">
+  <div class="top">
+    <button class="btn ghost" id="xoHome">🏠 Bosh sahifa</button>
+    <span class="ttl">❌⭕ Krestik-Nolik</span>
+    <button class="btn red" id="xoLeave" hidden>🚪 Chiqish</button>
+  </div>
+
+  <div class="banner" id="xoMsg">Yuklanmoqda…</div>
+  <div class="last" id="xoLast"></div>
+  <div class="tbar" id="xoTbar" hidden><b id="xoTfill"></b></div>
+
+  <div class="board" id="xoBoard"></div>
+
+  <!-- Qo'shilish paneli -->
+  <div class="panel center" id="xJoin">
+    <h4>📖 Qoidalar</h4>
+    <div class="rules">
+      <div id="xoPrizeTxt"></div>
+      ❌ birinchi qo‘shilgan, ⭕ ikkinchi o‘yinchi<br>
+      3 ta belgi bir qatorga tizilsa (yon, tik yoki yonma-yon) — g‘alaba<br>
+      🤝 Durang bo‘lsa, ikkala tanga qaytariladi<br>
+      ⏰ 90 soniya yurmasangiz yutqazasiz<br>
+      ❌ Raqib 10 daqiqada topilmasa, xona yopiladi va tanga qaytadi
+    </div>
+    <button class="btn big" id="xoJoin">🎟 Qo‘shilish</button>
+  </div>
+
+  <!-- Kutish paneli -->
+  <div class="panel" id="xWait" hidden>
+    <h4 class="center">👥 Raqib kutilmoqda</h4>
+    <div id="xoSlots"></div>
+    <div class="center mut" style="margin:10px 0">⏱ Xona <b id="xoWt">10:00</b> dan keyin yopiladi</div>
+    <div class="center"><button class="btn red" id="xoCancel">❌ Bekor qilish</button></div>
+  </div>
+
+  <!-- O'yin paneli -->
+  <div class="panel" id="xPlay" hidden></div>
+
+  <div class="wo" id="xoWo" hidden></div>
+  <div class="rain" id="xoRain"></div>
+</div>
+
+<script>
+window.game_xo = (function () {
+  var GAME = 'xo';
+  var COST = 2;          // server yuborgan qiymat bilan yangilanadi
+  var FEE = 1;           // egasi ulushi (serverdagi CONFIG.FEE bilan bir xil)
+  var MARK = ['X', 'O'];
+  var COL = ['#ff5252', '#4fc3f7'];
+
+  var TG = window.Telegram && window.Telegram.WebApp;
+  var $ = function (id) { return document.getElementById(id); };
+  var root = $('xo');
+
+  var roomId = null, view = null, timer = null, busy = false, gen = 0;
+  var active = false, recvAt = 0, uiTimer = null, finishedShown = null;
+  var prevBoard = null, boardKey = '', pending = -1;
+
+  function ini() { return window.APP.initData; }
+  function haptic(t) { try { TG.HapticFeedback.impactOccurred(t || 'light'); } catch (e) {} }
+  function hapticOk() { try { TG.HapticFeedback.notificationOccurred('success'); } catch (e) {} }
+  function prize() { return COST * 2 - FEE; }
+
+  function ask(text, cb) {
+    if (TG && TG.showConfirm) {
+      try { TG.showConfirm(text, function (ok) { if (ok) cb(); }); return; } catch (e) {}
+    }
+    if (confirm(text)) cb();
+  }
+
+  // Telegram yuqori paneli tugmalarni yopib qo'ymasligi uchun
+  function applyInsets() {
+    var top = 12;
+    try {
+      if (TG && TG.isFullscreen) {
+        var a = (TG.safeAreaInset && TG.safeAreaInset.top) || 0;
+        var b = (TG.contentSafeAreaInset && TG.contentSafeAreaInset.top) || 0;
+        top += (a + b) || 72;
+      }
+    } catch (e) {}
+    root.style.paddingTop = top + 'px';
+  }
+
+  /* ---------- Taxta ---------- */
+  function renderBoard(force) {
+    var V = view, S = (V && V.state) || {};
+    var board = S.board || [-1, -1, -1, -1, -1, -1, -1, -1, -1];
+    var legal = (V && V.legal) || [];
+    var line = S.line || [];
+    var key = board.join() + '|' + legal.join() + '|' + line.join() + '|' + S.lastCell + '|' + pending;
+    if (!force && key === boardKey) return;
+    boardKey = key;
+    if (!prevBoard) prevBoard = board.slice();
+
+    var h = '';
+    for (var i = 0; i < 9; i++) {
+      var v = board[i];
+      var cls = 'cell' + (legal.indexOf(i) >= 0 ? ' legal' : '') + (line.indexOf(i) >= 0 ? ' win' : '') +
+        (S.lastCell === i && !line.length ? ' last' : '');
+      var inner = '';
+      if (v >= 0) {
+        inner = '<span class="mk ' + (v === 0 ? 'x' : 'o') + (prevBoard[i] !== v ? ' pop' : '') + '">' + MARK[v] + '</span>';
+      } else if (pending === i && V && V.seat >= 0) {
+        inner = '<span class="mk ghost ' + (V.seat === 0 ? 'x' : 'o') + '">' + MARK[V.seat] + '</span>';
+      }
+      h += '<button class="' + cls + '" data-i="' + i + '">' + inner + '</button>';
+    }
+    $('xoBoard').innerHTML = h;
+    prevBoard = board.slice();
+  }
+
+  function updateTimers() {
+    if (!view) return;
+    var el = (performance.now() - recvAt) / 1000;
+    if (view.status === 'playing') {
+      var left = Math.max(0, view.turnLeft - el);
+      var pct = Math.max(0, Math.min(100, left / view.afk * 100));
+      var f = $('xoTfill');
+      f.style.width = pct + '%';
+      f.style.background = pct < 25 ? '#e53935' : (pct < 55 ? '#f9a825' : '#43a047');
+    } else if (view.status === 'waiting') {
+      var w = Math.max(0, Math.round(view.waitLeft - el));
+      var m = Math.floor(w / 60), s = w % 60;
+      $('xoWt').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+  }
+
+  /* ---------- Ko'rinish ---------- */
+  function playersHtml(V, S, waiting) {
+    var out = '';
+    V.seats.forEach(function (p) {
+      var nm = V.names[p];
+      if (waiting && !nm) {
+        out += '<div class="pl slot"><span><span class="badge" style="color:#39406a">' + MARK[p] +
+          '</span>Bo‘sh joy…</span><span>⏳</span></div>';
+        return;
+      }
+      var isOut = !waiting && S.out && S.out[p];
+      var turn = !waiting && V.status === 'playing' && S.turn === p && !isOut;
+      var right = waiting ? '✅' : (isOut ? '🚪 chiqdi' : (turn ? '🎯 yuradi' : ''));
+      out += '<div class="pl' + (turn ? ' turn' : '') + '" style="--c:' + COL[p] + ';' + (isOut ? 'opacity:.5' : '') + '">' +
+        '<span><span class="badge" style="color:' + COL[p] + '">' + MARK[p] + '</span>' + window.esc(nm || '—') +
+        (p === V.seat ? ' <em>(siz)</em>' : '') + '</span><span class="mut">' + right + '</span></div>';
+    });
+    return out;
+  }
+
+  function render() {
+    var V = view, S = (V && V.state) || {}, st = V ? V.status : '';
+    var wait = st === 'waiting', playing = st === 'playing', fin = st === 'finished';
+
+    if (V && V.cost) COST = V.cost;
+    $('xoPrizeTxt').innerHTML = '💰 Kirish: <b>' + COST + ' 🪙</b>. G‘olib: <b>' + prize() + ' 🪙</b><br>';
+    $('xoJoin').textContent = '🎟 Qo‘shilish (' + COST + ' 🪙)';
+    $('xoCancel').textContent = '❌ Bekor qilish (' + COST + ' 🪙 qaytadi)';
+
+    $('xJoin').hidden = !!roomId && !fin;
+    $('xWait').hidden = !wait;
+    $('xPlay').hidden = !(playing || fin);
+    $('xoLeave').hidden = !(wait || playing);
+    $('xoTbar').hidden = !playing;
+
+    var msg;
+    if (!roomId) msg = 'Tayyormisiz? Raqib bilan bellashing!';
+    else if (!V) msg = 'Yuklanmoqda…';
+    else if (wait) msg = '⏳ Raqib kutilmoqda · 🏆 ' + V.prize + ' 🪙';
+    else if (fin) {
+      if (S.draw) msg = '🤝 Durang! Tangalar qaytarildi';
+      else msg = S.winner === V.seat ? '🎉 Tabriklaymiz, siz g‘olibsiz!' : '🏆 G‘olib: ' + (V.names[S.winner] || '—');
+    } else {
+      var my = V.seat === S.turn;
+      msg = my ? '👉 Sizning navbatingiz (' + MARK[V.seat] + ')' : '⏳ ' + (V.names[S.turn] || '') + ' yuryapti';
+    }
+    $('xoMsg').textContent = msg;
+    $('xoLast').textContent = ((playing || fin) && S.last) ? S.last : '';
+
+    if (V && wait) $('xoSlots').innerHTML = playersHtml(V, S, true);
+    if (V && (playing || fin)) $('xPlay').innerHTML = playersHtml(V, S, false);
+
+    renderBoard(false);
+    updateTimers();
+  }
+
+  function showRain(emojis) {
+    var r = $('xoRain');
+    var h = '';
+    for (var i = 0; i < 36; i++) {
+      h += '<span style="left:' + (Math.random() * 100) + '%;animation-duration:' + (2 + Math.random() * 2.5) +
+        's;animation-delay:' + (Math.random() * 0.8) + 's">' + emojis[i % emojis.length] + '</span>';
+    }
+    r.innerHTML = h;
+    setTimeout(function () { r.innerHTML = ''; }, 5500);
+  }
+
+  function showResult() {
+    var V = view, S = V.state;
+    var draw = !!S.draw, me = !draw && S.winner === V.seat;
+    var box = $('xoWo');
+    box.innerHTML = '<div class="box"><div class="big">' + (draw ? '🤝' : (me ? '🏆' : '😔')) + '</div>' +
+      '<h3 style="margin:10px 0">' + (draw ? 'Durang!' : (me ? 'G‘alaba! +' + V.prize + ' 🪙' : 'Yutqazdingiz')) + '</h3>' +
+      '<div class="mut" style="margin-bottom:16px">' +
+      (draw ? 'Tangalar qaytarildi.' : (me ? 'Tabriklaymiz!' : 'G‘olib: ' + window.esc(V.names[S.winner] || '—'))) + '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+      '<button class="btn" id="xoAgain">🔁 Yana o‘ynash</button>' +
+      '<button class="btn ghost" id="xoBack">🏠 Bosh sahifa</button></div></div>';
+    box.hidden = false;
+    $('xoAgain').onclick = function () { box.hidden = true; newGame(); };
+    $('xoBack').onclick = function () { box.hidden = true; goHome(); };
+    if (me) { hapticOk(); showRain(['🎉', '🪙', '⭐', '🏆']); }
+  }
+
+  /* ---------- Holatni qabul qilish ---------- */
+  function applyView(v) {
+    view = v;
+    recvAt = performance.now();
+    pending = -1;
+
+    if (v.status === 'cancelled') {
+      stopPoll(); roomId = null; view = null; prevBoard = null;
+      window.toast('Kutish vaqti tugadi. Tangalar qaytarildi 🪙');
+      if (window.refreshApp) window.refreshApp();
+      render();
+      return;
+    }
+
+    render();
+
+    if (v.status === 'finished') {
+      stopPoll();
+      if (window.refreshApp) window.refreshApp();
+      if (finishedShown !== roomId) { finishedShown = roomId; showResult(); }
+    }
+  }
+
+  function joinGame() {
+    if (busy) return;
+    busy = true;
+    window.gcall('joinRoom', ini(), GAME, 2).then(function (r) {
+      roomId = r.roomId;
+      view = null; prevBoard = null; boardKey = ''; pending = -1;
+      window.toast('Xonaga qo‘shildingiz');
+      if (window.refreshApp) window.refreshApp();
+      render();
+      startPoll();
+    }).catch(function (e) { window.toast(e.message); })
+      .then(function () { busy = false; });
+  }
+
+  function newGame() {
+    roomId = null; view = null; prevBoard = null; boardKey = ''; pending = -1;
+    render();
+    joinGame();
+  }
+
+  function leave() {
+    if (!roomId || busy) return;
+    var w = view && view.status === 'waiting';
+    ask(w ? 'Xonadan chiqasizmi? ' + COST + ' 🪙 qaytariladi.'
+          : 'O‘yindan chiqsangiz yutqazasiz va tanga qaytmaydi. Chiqasizmi?', function () {
+      busy = true;
+      window.gcall('leaveRoom', ini(), roomId).then(function (r) {
+        stopPoll();
+        roomId = null; view = null; prevBoard = null; boardKey = ''; pending = -1;
+        window.toast(r && r.refund ? '🪙 ' + r.refund + ' qaytarildi' : 'O‘yindan chiqdingiz');
+        if (window.refreshApp) window.refreshApp();
+        render();
+      }).catch(function (e) { window.toast(e.message); })
+        .then(function () { busy = false; });
+    });
+  }
+
+  function goHome() {
+    if (view && view.status === 'playing') window.toast('O‘yin davom etmoqda, navbatni o‘tkazib yubormang!');
+    window.closeGame(GAME);
+  }
+
+  function move(i) {
+    if (busy) return;
+    busy = true;
+    pending = i;
+    renderBoard(true);
+    haptic('light');
+    window.gcall('xoMove', ini(), roomId, i)
+      .then(applyView)
+      .catch(function (e) { pending = -1; renderBoard(true); window.toast(e.message); })
+      .then(function () { busy = false; });
+  }
+
+  /* ---------- So'rov (polling) ---------- */
+  function startPoll() { gen++; clearTimeout(timer); tick(gen); }
+  function stopPoll() { gen++; clearTimeout(timer); }
+  function tick(g) {
+    if (g !== gen || !roomId) return;
+    window.gcall('getRoomState', ini(), roomId)
+      .then(function (v) { if (g === gen && !busy) applyView(v); })
+      .catch(function () {})
+      .then(function () {
+        if (g === gen && (!view || (view.status !== 'finished' && view.status !== 'cancelled'))) {
+          timer = setTimeout(function () { tick(g); }, (view && view.status === 'waiting') ? 2500 : 1500);
+        }
+      });
+  }
+
+  $('xoBoard').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.cell') : null;
+    if (!b || !view || view.status !== 'playing') return;
+    var i = Number(b.getAttribute('data-i'));
+    if (view.legal && view.legal.indexOf(i) >= 0) move(i);
+  });
+
+  /* ---------- Ochish / yopish ---------- */
+  var backH = function () { goHome(); };
+
+  function open() {
+    active = true;
+    applyInsets();
+    view = null; prevBoard = null; boardKey = ''; pending = -1;
+    $('xoWo').hidden = true;
+    try { if (TG && TG.BackButton) { TG.BackButton.onClick(backH); TG.BackButton.show(); } } catch (e) {}
+    clearInterval(uiTimer);
+    uiTimer = setInterval(updateTimers, 500);
+    render();
+    window.gcall('getMyRoom', ini(), GAME).then(function (id) {
+      roomId = id;
+      if (roomId) startPoll(); else render();
+    }).catch(function (e) { window.toast(e.message); });
+  }
+
+  function close() {
+    active = false;
+    clearInterval(uiTimer);
+    stopPoll();
+    try { if (TG && TG.BackButton) { TG.BackButton.offClick(backH); TG.BackButton.hide(); } } catch (e) {}
+  }
+
+  $('xoJoin').onclick = joinGame;
+  $('xoHome').onclick = goHome;
+  $('xoLeave').onclick = leave;
+  $('xoCancel').onclick = leave;
+  render();
+
+  return { open: open, close: close };
+})();
+</script>
