@@ -61,13 +61,13 @@
   <!-- VAZIFALAR -->
   <section class="page" id="p-tasks">
     <h3>✅ Vazifalar</h3>
-    <div id="tasks"></div>
+    <div id="tasks"><div class="card mut">Yuklanmoqda…</div></div>
   </section>
 
   <!-- O'YINLAR (markaz) -->
   <section class="page active" id="p-games">
     <h3>🎮 O‘yinlar</h3>
-    <div id="games"></div>
+    <div id="games"><div class="card mut">Yuklanmoqda…</div></div>
   </section>
 
   <!-- PROFIL + REYTING -->
@@ -100,12 +100,21 @@
   <div id="gameScreens"></div>
 
 <script>
-  // Apps Script manzili (A.gs deploy URL)
+  // ============================================================
+  // 1) Apps Script manzili
+  // ============================================================
   var API_URL = 'https://script.google.com/macros/s/AKfycbx3zSWcel7SjsKFi3b6tUZOza-Y7FaVFesYB2-4OvN7rRZeKjwohkJ93wuRCNAUGGCp/exec';
+
+  // ============================================================
+  // 2) O'YINLAR RO'YXATI
+  // GitHub'dagi o'yin fayllarining nomini shu yerga yozing.
+  // Yangi o'yin qo'shish uchun: faylni GitHub'ga yuklang va nomini shu ro'yxatga yozing.
+  // Masalan:  var GAME_FILES = ['B1.html', 'B2.html', 'B3.html'];
+  // ============================================================
+  var GAME_FILES = ['B1.html'];
 
   var $ = function (id) { return document.getElementById(id); };
 
-  // Kutilmagan xato bo'lsa, ekranda ko'rsatadi (jim qolib ketmaydi)
   window.onerror = function (msg) {
     try { showError('Xato: ' + msg); } catch (e) {}
   };
@@ -148,7 +157,6 @@
   window.esc = esc;
 
   // ---------- Serverga so'rov ----------
-  // Content-Type berilmaydi: brauzer oldindan tekshiruv (preflight) yubormaydi, Apps Script ishlaydi
   function gcall(fn) {
     var args = Array.prototype.slice.call(arguments, 1);
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -181,7 +189,112 @@
   }
   window.toast = toast;
 
-  // ---------- Ma'lumotlarni yuklash ----------
+  // ============================================================
+  // O'YIN FAYLLARINI GITHUB'DAN O'QISH
+  // Har bir fayl (masalan B1.html) o'qiladi, ichidagi o'yin ma'lumoti (game-info)
+  // olinadi, o'yin oynasi yaratiladi va bosh sahifada karta chiqadi.
+  // ============================================================
+  var GAMES = {};        // id -> {id, name, icon, desc, cost, prize, file}
+  var GAME_ORDER = [];   // id lar tartibi
+  var GAME_ERRORS = [];  // o'qilmagan fayllar
+
+  function loadGameFile(file) {
+    return fetch(file + '?v=' + Date.now())
+      .then(function (r) {
+        if (!r.ok) throw new Error(file + ' topilmadi (GitHub\'ga yuklanganini tekshiring)');
+        return r.text();
+      })
+      .then(function (html) {
+        var box = document.createElement('div');
+        box.innerHTML = html;
+
+        var info = box.querySelector('.game-info');
+        if (!info) throw new Error(file + ' ichida game-info yo\'q');
+        var id = info.getAttribute('data-id');
+        if (!id) throw new Error(file + ': game-info da data-id yo\'q');
+        var meta = {
+          id: id,
+          file: file,
+          name: info.getAttribute('data-name') || id,
+          icon: info.getAttribute('data-icon') || '🎮',
+          desc: info.getAttribute('data-desc') || '',
+          cost: Number(info.getAttribute('data-cost') || 0),
+          prize: Number(info.getAttribute('data-prize') || 0)
+        };
+        info.parentNode.removeChild(info);
+
+        var scripts = Array.prototype.slice.call(box.querySelectorAll('script'));
+        scripts.forEach(function (s) { s.parentNode.removeChild(s); });
+
+        var screen = document.createElement('div');
+        screen.className = 'game-screen';
+        screen.id = 'screen-' + id;
+        screen.hidden = true;
+        while (box.firstChild) screen.appendChild(box.firstChild);
+        $('gameScreens').appendChild(screen);
+
+        scripts.forEach(function (old) {
+          var s = document.createElement('script');
+          s.textContent = old.textContent;
+          document.body.appendChild(s);
+        });
+
+        GAMES[id] = meta;
+        if (GAME_ORDER.indexOf(id) < 0) GAME_ORDER.push(id);
+      })
+      .catch(function (e) {
+        GAME_ERRORS.push(e.message);
+      });
+  }
+
+  function loadAllGames() {
+    return Promise.all(GAME_FILES.map(loadGameFile)).then(renderGames);
+  }
+
+  function renderGames() {
+    var html = GAME_ORDER.map(function (id) {
+      var g = GAMES[id];
+      var cost = g.cost, prize = g.prize;
+      // Server (Games jadvali) narxni o'zgartirgan bo'lsa, shuni ko'rsatadi
+      if (DATA && DATA.games) {
+        var sg = DATA.games.filter(function (x) { return x.id === id; })[0];
+        if (sg) { cost = sg.cost; prize = sg.prize; }
+      }
+      return '<div class="card row" style="cursor:pointer" onclick="openGame(\'' + esc(id) + '\')">' +
+        '<div style="font-size:34px">' + esc(g.icon) + '</div>' +
+        '<div style="flex:1"><b>' + esc(g.name) + '</b>' +
+        '<div class="mut">' + esc(g.desc) + '</div>' +
+        '<div class="mut">🎟 ' + cost + ' 🪙 · 🏆 ' + prize + ' 🪙</div></div>' +
+        '<span style="font-size:20px">▶</span></div>';
+    }).join('');
+
+    GAME_ERRORS.forEach(function (m) {
+      html += '<div class="card" style="color:#ffb3b3">⚠️ ' + esc(m) + '</div>';
+    });
+
+    $('games').innerHTML = html || '<div class="card mut">O‘yinlar yo‘q</div>';
+  }
+
+  function openGame(id) {
+    var el = $('screen-' + id);
+    if (!el) { toast('O‘yin topilmadi'); return; }
+    if (!APP.initData) { toast('Iltimos, botni Telegram ichidan oching'); return; }
+    el.hidden = false;
+    var api = window['game_' + id];
+    if (api && api.open) api.open();
+  }
+
+  function closeGame(id) {
+    var el = $('screen-' + id);
+    if (el) el.hidden = true;
+    var api = window['game_' + id];
+    if (api && api.close) api.close();
+    refresh();
+  }
+  window.openGame = openGame;
+  window.closeGame = closeGame;
+
+  // ---------- Foydalanuvchi ma'lumotini yuklash ----------
   var DATA = null;
   var loading = false;
 
@@ -225,19 +338,12 @@
         '</div>';
     }).join('') || '<div class="card mut">Hozircha vazifa yo‘q</div>';
 
-    $('games').innerHTML = d.games.map(function (g) {
-      return '<div class="card row" style="cursor:pointer" onclick="openGame(\'' + esc(g.id) + '\')">' +
-        '<div style="font-size:34px">' + esc(g.icon) + '</div>' +
-        '<div style="flex:1"><b>' + esc(g.name) + '</b>' +
-        '<div class="mut">' + esc(g.description) + '</div>' +
-        '<div class="mut">🎟 ' + g.cost + ' 🪙 · 🏆 ' + g.prize + ' 🪙</div></div>' +
-        '<span style="font-size:20px">▶</span></div>';
-    }).join('') || '<div class="card mut">O‘yinlar yo‘q</div>';
-
     $('lb').innerHTML = d.leaderboard.map(function (u, i) {
       return '<div class="row" style="padding:7px 4px;' + (u.me ? 'color:var(--gold);font-weight:700' : '') + '">' +
         '<span>' + (i + 1) + '. ' + esc(u.name) + '</span><span>🪙 ' + u.coins + '</span></div>';
     }).join('');
+
+    renderGames();
   }
 
   // ---------- Reklama (vazifa) ----------
@@ -274,72 +380,14 @@
   }
   window.showPage = showPage;
 
-  // ---------- O'yin fayllarini avtomatik yuklash ----------
-  // Games jadvalidagi "file" ustuni (masalan B1) bo'yicha B1.html yuklanadi.
-  var loaded = {};
-
-  function loadGame(g) {
-    if (loaded[g.id]) return loaded[g.id];
-    var screen = document.createElement('div');
-    screen.className = 'game-screen';
-    screen.id = 'screen-' + g.id;
-    screen.hidden = true;
-    $('gameScreens').appendChild(screen);
-
-    loaded[g.id] = fetch(g.file + '.html?v=' + Date.now())
-      .then(function (r) {
-        if (!r.ok) throw new Error(g.file + '.html topilmadi (GitHub\'ga yuklanganini tekshiring)');
-        return r.text();
-      })
-      .then(function (html) {
-        var box = document.createElement('div');
-        box.innerHTML = html;
-        var scripts = Array.prototype.slice.call(box.querySelectorAll('script'));
-        scripts.forEach(function (s) { s.parentNode.removeChild(s); });
-        while (box.firstChild) screen.appendChild(box.firstChild);
-        scripts.forEach(function (old) {
-          var s = document.createElement('script');
-          s.textContent = old.textContent;
-          document.body.appendChild(s);
-        });
-      })
-      .catch(function (e) {
-        delete loaded[g.id];
-        screen.remove();
-        throw e;
-      });
-    return loaded[g.id];
-  }
-
-  function openGame(id) {
-    var g = DATA && DATA.games.filter(function (x) { return x.id === id; })[0];
-    if (!g) { toast('O‘yin topilmadi'); return; }
-    toast('O‘yin yuklanmoqda…');
-    loadGame(g).then(function () {
-      $('toast').hidden = true;
-      $('screen-' + id).hidden = false;
-      var api = window['game_' + id];
-      if (api && api.open) api.open();
-    }).catch(function (e) { toast('⚠️ ' + e.message); });
-  }
-
-  function closeGame(id) {
-    var el = $('screen-' + id);
-    if (el) el.hidden = true;
-    var api = window['game_' + id];
-    if (api && api.close) api.close();
-    refresh();
-  }
-  window.openGame = openGame;
-  window.closeGame = closeGame;
-
   // ---------- Ishga tushirish ----------
   showPage('games');
+  loadAllGames();                 // o'yin fayllari GitHub'dan o'qiladi (serverga bog'liq emas)
   if (!APP.initData) {
     $('uname').textContent = 'Telegram aniqlanmadi';
-    toast('Iltimos, botni Telegram ichidan oching');
+    $('tasks').innerHTML = '<div class="card mut">Botni Telegram ichidan oching</div>';
   } else {
-    refresh();
+    refresh();                    // foydalanuvchi, tanga, reyting serverdan olinadi
   }
 </script>
 </body>
