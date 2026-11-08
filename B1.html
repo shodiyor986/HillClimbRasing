@@ -4,7 +4,7 @@
      data-id="ludo"
      data-name="Ludo King"
      data-icon="🎲"
-     data-desc="4 kishilik. Tuzoq 💀, raketa 🚀, yulduz ⭐"
+     data-desc="2-4 kishilik. Tuzoq 💀, raketa 🚀, yulduz ⭐"
      data-cost="3"
      data-prize="11"></div>
 
@@ -26,6 +26,11 @@
   #ludo .panel h4 { margin-bottom: 8px; }
   #ludo .rules { font-size: 13px; color: #b8c0e0; line-height: 1.7; margin-bottom: 12px; }
   #ludo .center { text-align: center; }
+  #ludo .sizes { display: flex; gap: 8px; margin: 0 0 14px; }
+  #ludo .sz { flex: 1; background: #141830; border: 2px solid #2b3150; border-radius: 12px; padding: 10px 4px;
+              color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; }
+  #ludo .sz small { display: block; color: #ffc83d; font-weight: 600; font-size: 12px; margin-top: 3px; }
+  #ludo .sz.sel { border-color: #7c5cff; background: #241f4d; box-shadow: 0 0 12px #7c5cff77; }
   #ludo .rollrow { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 8px; }
   #ludo .dice { width: 64px; height: 64px; border-radius: 14px; background: #fff; display: grid; flex: none;
                 grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 9px; gap: 2px; border: 3px solid #7c5cff;
@@ -66,17 +71,19 @@
 
   <!-- Qo'shilish paneli -->
   <div class="panel center" id="lJoin">
-    <h4>📖 Qoidalar</h4>
+    <h4>👥 Necha kishi o‘ynaydi?</h4>
+    <div class="sizes" id="ludoSizes"></div>
     <div class="rules">
+      <div id="ludoPrizeTxt"></div>
       🎲 Toshni chiqarish uchun <b>6</b> tushishi kerak<br>
       ⭐ Xavfsiz katak: u yerda tosh urilmaydi<br>
       🚀 Raketa: <b>5 qadam</b> oldinga uchiradi<br>
       💀 Tuzoq: toshni uyga qaytaradi<br>
       6 tushsa yoki raqibni ursangiz, yana yurasiz<br>
       ⏰ 90 soniya yurmasangiz o‘yindan chiqarilasiz<br>
-      ❌ 4 kishi 10 daqiqada to‘lmasa, xona yopiladi va tanga qaytadi
+      ❌ Xona 10 daqiqada to‘lmasa yopiladi, tanga qaytariladi
     </div>
-    <button class="btn big" id="ludoJoin">🎟 Qo‘shilish (3 🪙)</button>
+    <button class="btn big" id="ludoJoin">🎟 Qo‘shilish</button>
   </div>
 
   <!-- Kutish paneli -->
@@ -84,7 +91,7 @@
     <h4 class="center">👥 Raqiblar kutilmoqda</h4>
     <div id="ludoSlots"></div>
     <div class="center mut" style="margin:10px 0">⏱ Xona <b id="ludoWt">10:00</b> dan keyin yopiladi</div>
-    <div class="center"><button class="btn red" id="ludoCancel">❌ Bekor qilish (3 🪙 qaytadi)</button></div>
+    <div class="center"><button class="btn red" id="ludoCancel">❌ Bekor qilish</button></div>
   </div>
 
   <!-- O'yin paneli -->
@@ -108,8 +115,11 @@
 
 <script>
 window.game_ludo = (function () {
-  var GAME = 'ludo', COST = 3, PRIZE = 11;
-  var G = 21, CS = 40, SIZE = G * CS;    // 21 x 21 katak, har biri 40px
+  var GAME = 'ludo';
+  var COST = 3;          // server yuborgan qiymat bilan yangilanadi
+  var FEE = 1;           // egasi ulushi (serverdagi CONFIG.FEE bilan bir xil)
+  var size = 4;          // tanlangan o'yinchilar soni
+  var G = 21, CS = 40, SIZE = G * CS;
   var HOME = 88, TRACKN = 80;
   var COLORS = ['#e53935', '#43a047', '#f9a825', '#1e88e5'];
   var LIGHT  = ['#ffcdd2', '#c8e6c9', '#fff59d', '#bbdefb'];
@@ -123,7 +133,6 @@ window.game_ludo = (function () {
     rockets: [14, 34, 54, 74]
   };
 
-  // 80 katakli halqa (soat mili bo'yicha, yuqori chap burchakdan)
   var TRACK = (function () {
     var t = [], r, c;
     for (c = 0; c <= 20; c++) t.push([0, c]);
@@ -159,6 +168,8 @@ window.game_ludo = (function () {
 
   function ini() { return window.APP.initData; }
   function cfg() { return (view && view.cfg) || DEFAULT_CFG; }
+  function seatsNow() { return (view && view.seats) || [0, 1, 2, 3]; }
+  function prizeOf(n) { return COST * n - FEE; }
   function haptic(t) { try { TG.HapticFeedback.impactOccurred(t || 'light'); } catch (e) {} }
   function hapticOk() { try { TG.HapticFeedback.notificationOccurred('success'); } catch (e) {} }
 
@@ -209,9 +220,14 @@ window.game_ludo = (function () {
   }
 
   function buildBoard() {
-    var C = cfg(), key = JSON.stringify(C);
+    var C = cfg(), used = seatsNow();
+    var key = JSON.stringify(C) + '|' + used.join('');
     if (key === boardKey) return;
     boardKey = key;
+    // O'ynamaydigan burchaklar kulrang bo'ladi
+    var CO = COLORS.map(function (c, p) { return used.indexOf(p) >= 0 ? c : '#b4bad2'; });
+    var LI = LIGHT.map(function (c, p) { return used.indexOf(p) >= 0 ? c : '#e6e9f3'; });
+
     var b = bc.getContext('2d');
     var gr = b.createLinearGradient(0, 0, SIZE, SIZE);
     gr.addColorStop(0, '#f4f6ff'); gr.addColorStop(1, '#dbe2f5');
@@ -219,19 +235,19 @@ window.game_ludo = (function () {
 
     YARDS.forEach(function (y, p) {
       var r = y[0], c = y[1];
-      b.fillStyle = COLORS[p]; rr(b, c * CS, r * CS, 6 * CS, 6 * CS, 0.9 * CS); b.fill();
+      b.fillStyle = CO[p]; rr(b, c * CS, r * CS, 6 * CS, 6 * CS, 0.9 * CS); b.fill();
       b.fillStyle = '#fff'; rr(b, (c + 0.6) * CS, (r + 0.6) * CS, 4.8 * CS, 4.8 * CS, 0.6 * CS); b.fill();
       for (var i = 0; i < 4; i++) {
         b.beginPath();
         b.arc((c + 1.5 + 3 * (i & 1)) * CS, (r + 1.5 + 3 * (i >> 1)) * CS, 0.62 * CS, 0, Math.PI * 2);
-        b.fillStyle = LIGHT[p]; b.fill();
-        b.lineWidth = 2; b.strokeStyle = COLORS[p]; b.stroke();
+        b.fillStyle = LI[p]; b.fill();
+        b.lineWidth = 2; b.strokeStyle = CO[p]; b.stroke();
       }
     });
 
     TRACK.forEach(function (cell) { cellBox(b, cell, '#ffffff', '#c9cfe6'); });
     LANE.forEach(function (lane, p) {
-      lane.forEach(function (cell) { cellBox(b, cell, LIGHT[p], COLORS[p]); });
+      lane.forEach(function (cell) { cellBox(b, cell, LI[p], CO[p]); });
     });
 
     var tri = [[[9, 9], [12, 9]], [[12, 9], [12, 12]], [[12, 12], [9, 12]], [[9, 12], [9, 9]]];
@@ -241,14 +257,14 @@ window.game_ludo = (function () {
       b.lineTo(e[1][0] * CS, e[1][1] * CS);
       b.lineTo(10.5 * CS, 10.5 * CS);
       b.closePath();
-      b.fillStyle = COLORS[p]; b.fill();
+      b.fillStyle = CO[p]; b.fill();
     });
     b.beginPath(); b.arc(10.5 * CS, 10.5 * CS, 0.75 * CS, 0, Math.PI * 2);
     b.fillStyle = '#fff'; b.fill();
     b.font = Math.round(CS * 0.9) + 'px sans-serif'; b.textAlign = 'center'; b.textBaseline = 'middle';
     b.fillStyle = '#000'; b.fillText('🏆', 10.5 * CS, 10.6 * CS);
 
-    C.start.forEach(function (g, p) { cellBox(b, TRACK[g], COLORS[p], '#fff'); });
+    C.start.forEach(function (g, p) { cellBox(b, TRACK[g], CO[p], '#fff'); });
     C.stars.forEach(function (g) { cellBox(b, TRACK[g], '#fff3c4', '#e0b800'); cellEmoji(b, '⭐', TRACK[g]); });
     C.traps.forEach(function (g) { cellBox(b, TRACK[g], '#ffd9d9', '#e57373'); cellEmoji(b, '💀', TRACK[g]); });
     C.rockets.forEach(function (g) { cellBox(b, TRACK[g], '#d9eeff', '#64b5f6'); cellEmoji(b, '🚀', TRACK[g]); });
@@ -279,9 +295,11 @@ window.game_ludo = (function () {
   function collectTokens() {
     var S = (view && view.state) || {};
     var tokens = S.tokens || [[-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1]];
+    var used = seatsNow();
     var items = [], seen = {};
     var offs = [[0, 0], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]];
     for (var p = 0; p < 4; p++) {
+      if (used.indexOf(p) < 0) continue;
       if (S.out && S.out[p]) continue;
       for (var i = 0; i < 4; i++) {
         var t = tokens[p][i];
@@ -385,13 +403,26 @@ window.game_ludo = (function () {
   }
 
   /* ---------- Ko'rinish ---------- */
+  function renderSizes() {
+    var h = '';
+    [2, 3, 4].forEach(function (n) {
+      h += '<button class="sz' + (n === size ? ' sel' : '') + '" data-n="' + n + '">👥 ' + n +
+        ' kishi<small>🏆 ' + prizeOf(n) + ' 🪙</small></button>';
+    });
+    $('ludoSizes').innerHTML = h;
+    $('ludoPrizeTxt').innerHTML = '💰 Kirish: <b>' + COST + ' 🪙</b>. G‘olib: 2 kishi <b>' + prizeOf(2) +
+      '</b>, 3 kishi <b>' + prizeOf(3) + '</b>, 4 kishi <b>' + prizeOf(4) + ' 🪙</b><br>';
+    $('ludoJoin').textContent = '🎟 Qo‘shilish (' + COST + ' 🪙) · ' + size + ' kishilik';
+    $('ludoCancel').textContent = '❌ Bekor qilish (' + COST + ' 🪙 qaytadi)';
+  }
+
   function playersHtml(V, S, waiting) {
     var out = '';
-    for (var p = 0; p < V.max; p++) {
+    V.seats.forEach(function (p) {
       var nm = V.names[p];
       if (waiting && !nm) {
         out += '<div class="pl slot"><span><span class="dot" style="background:#39406a"></span>Bo‘sh joy…</span><span>⏳</span></div>';
-        continue;
+        return;
       }
       var isOut = !waiting && S.out && S.out[p];
       var turn = !waiting && V.status === 'playing' && S.turn === p && !isOut;
@@ -400,13 +431,16 @@ window.game_ludo = (function () {
       out += '<div class="pl' + (turn ? ' turn' : '') + '" style="--c:' + COLORS[p] + ';' + (isOut ? 'opacity:.5' : '') + '">' +
         '<span><span class="dot" style="background:' + COLORS[p] + '"></span>' + window.esc(nm || '—') +
         (p === V.seat ? ' <em>(siz)</em>' : '') + '</span><span class="mut">' + right + '</span></div>';
-    }
+    });
     return out;
   }
 
   function render() {
     var V = view, S = (V && V.state) || {}, st = V ? V.status : '';
     var wait = st === 'waiting', playing = st === 'playing', fin = st === 'finished';
+
+    if (V && V.cost) COST = V.cost;
+    renderSizes();
 
     $('lJoin').hidden = !!roomId && !fin;
     $('lWait').hidden = !wait;
@@ -415,9 +449,10 @@ window.game_ludo = (function () {
     $('ludoTbar').hidden = !playing;
 
     var msg;
-    if (!roomId) msg = 'Xush kelibsiz! G‘olib ' + PRIZE + ' 🪙 oladi';
+    if (!roomId) msg = 'Xush kelibsiz! Necha kishi o‘ynashini tanlang';
     else if (!V) msg = 'Yuklanmoqda…';
-    else if (wait) msg = '⏳ Raqiblar kutilmoqda: ' + V.names.length + '/' + V.max;
+    else if (wait) msg = '⏳ Raqiblar kutilmoqda: ' + V.names.filter(Boolean).length + '/' + V.max +
+      ' · 🏆 ' + V.prize + ' 🪙';
     else if (fin) msg = S.winner === V.seat ? '🎉 Tabriklaymiz, siz g‘olibsiz!' : '🏆 G‘olib: ' + (V.names[S.winner] || '—');
     else {
       var my = V.seat === S.turn;
@@ -434,8 +469,6 @@ window.game_ludo = (function () {
 
     if (V && wait) $('ludoSlots').innerHTML = playersHtml(V, S, true);
     if (V && (playing || fin)) $('ludoPlayers').innerHTML = playersHtml(V, S, false);
-
-    $('ludoJoin').textContent = '🎟 Qo‘shilish (' + COST + ' 🪙)';
   }
 
   function showRain(emojis) {
@@ -453,7 +486,7 @@ window.game_ludo = (function () {
     var V = view, S = V.state, me = S.winner === V.seat;
     var box = $('ludoWo');
     box.innerHTML = '<div class="box"><div class="big">' + (me ? '🏆' : '🎲') + '</div>' +
-      '<h3 style="margin:10px 0">' + (me ? 'G‘alaba! +' + PRIZE + ' 🪙' : 'O‘yin tugadi') + '</h3>' +
+      '<h3 style="margin:10px 0">' + (me ? 'G‘alaba! +' + V.prize + ' 🪙' : 'O‘yin tugadi') + '</h3>' +
       '<div class="mut" style="margin-bottom:16px">' + (me ? 'Tabriklaymiz!' : 'G‘olib: ' + window.esc(V.names[S.winner] || '—')) + '</div>' +
       '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
       '<button class="btn" id="woAgain">🎲 Yana o‘ynash</button>' +
@@ -519,7 +552,7 @@ window.game_ludo = (function () {
   function joinGame() {
     if (busy) return;
     busy = true;
-    window.gcall('joinRoom', ini(), GAME).then(function (r) {
+    window.gcall('joinRoom', ini(), GAME, size).then(function (r) {
       roomId = r.roomId;
       view = null; lastRollN = null; anim = {};
       window.toast('Xonaga qo‘shildingiz');
@@ -599,6 +632,14 @@ window.game_ludo = (function () {
       if (d < bd) { bd = d; best = i; }
     });
     if (bd < 1.6) moveToken(best);
+  });
+
+  $('ludoSizes').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.sz') : null;
+    if (!b) return;
+    size = Number(b.getAttribute('data-n')) || 4;
+    haptic('light');
+    renderSizes();
   });
 
   /* ---------- Ochish / yopish ---------- */
