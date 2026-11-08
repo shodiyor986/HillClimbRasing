@@ -9,48 +9,113 @@
      data-prize="11"></div>
 
 <style>
-  #ludo { color: #fff; max-width: 520px; margin: 0 auto; }
+  #ludo { color: #fff; max-width: 520px; margin: 0 auto; padding: 12px 0 28px; position: relative; }
   #ludo .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
-  #ludo .msg { text-align: center; min-height: 48px; margin: 8px 0; font-weight: 600; white-space: pre-line; }
-  #ludo canvas { width: 100%; display: block; border-radius: 16px; background: #e9edf7; touch-action: manipulation; cursor: pointer;
-                 box-shadow: 0 6px 20px #0008; }
-  #ludo .bar { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
-  #ludo .bar .btn { font-size: 16px; padding: 12px 18px; }
-  #ludo .legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: 13px; color: #9aa3c7; margin-bottom: 10px; }
-  #ludo .pl { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px;
-              border-radius: 10px; background: #1a1f35; margin-bottom: 6px; }
+  #ludo .top .btn { padding: 8px 12px; font-size: 14px; }
+  #ludo .ttl { font-weight: 800; font-size: 17px; }
+  #ludo .btn.ghost { background: #2b3150; }
+  #ludo .btn.red { background: #c62f4a; }
+  #ludo .btn.big { font-size: 17px; padding: 13px 20px; }
+  #ludo .banner { text-align: center; font-weight: 700; font-size: 16px; margin: 6px 0 2px; min-height: 22px; }
+  #ludo .last { text-align: center; color: #9aa3c7; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  #ludo .tbar { height: 6px; border-radius: 4px; background: #222a48; overflow: hidden; margin-bottom: 10px; }
+  #ludo .tbar b { display: block; height: 100%; width: 100%; background: #43a047; transition: width .3s linear, background .3s; }
+  #ludo canvas { width: 100%; display: block; border-radius: 18px; background: #e9edf7; touch-action: manipulation;
+                 cursor: pointer; box-shadow: 0 8px 24px #000a; }
+  #ludo .panel { background: #1a1f35; border-radius: 14px; padding: 14px; margin-top: 12px; }
+  #ludo .panel h4 { margin-bottom: 8px; }
+  #ludo .rules { font-size: 13px; color: #b8c0e0; line-height: 1.7; margin-bottom: 12px; }
+  #ludo .center { text-align: center; }
+  #ludo .rollrow { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 14px 0 8px; }
+  #ludo .dice { width: 64px; height: 64px; border-radius: 14px; background: #fff; display: grid; flex: none;
+                grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 9px; gap: 2px; border: 3px solid #7c5cff;
+                box-shadow: 0 6px 14px #0007, inset 0 -3px 0 #d5d9e8; }
+  #ludo .dice i { border-radius: 50%; background: transparent; }
+  #ludo .dice i.on { background: #1a1f35; }
+  #ludo .dice.rolling { animation: ludoRoll .45s linear infinite; }
+  @keyframes ludoRoll { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.12); } 100% { transform: rotate(360deg) scale(1); } }
+  #ludo .pulse { animation: ludoPulse 1s ease-in-out infinite; }
+  @keyframes ludoPulse { 50% { box-shadow: 0 0 0 6px #7c5cff55; } }
+  #ludo .pl { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px;
+              background: #141830; margin-bottom: 6px; border: 2px solid transparent; }
+  #ludo .pl.turn { border-color: var(--c); box-shadow: 0 0 14px var(--c); }
+  #ludo .pl.slot { border: 2px dashed #39406a; color: #6f78a3; }
+  #ludo .pl em { color: #9aa3c7; font-style: normal; font-size: 12px; }
   #ludo .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  #ludo .legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: 13px; color: #9aa3c7; margin-top: 12px; }
+  #ludo .wo { position: fixed; inset: 0; background: #000b; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #ludo .wo .box { background: #1a1f35; border-radius: 20px; padding: 24px; text-align: center; max-width: 340px; width: 100%; }
+  #ludo .wo .big { font-size: 56px; }
+  #ludo .rain { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 90; }
+  #ludo .rain span { position: absolute; top: -30px; font-size: 26px; animation: ludoFall linear forwards; }
+  @keyframes ludoFall { to { transform: translateY(110vh) rotate(360deg); } }
 </style>
 
 <div id="ludo">
   <div class="top">
-    <button class="btn" id="ludoBack" style="background:#2b3150">⬅ Orqaga</button>
-    <b>🎲 Ludo King</b>
-    <span class="mut">🎟 3 🪙</span>
+    <button class="btn ghost" id="ludoHome">🏠 Bosh sahifa</button>
+    <span class="ttl">🎲 Ludo King</span>
+    <button class="btn red" id="ludoLeave" hidden>🚪 Chiqish</button>
   </div>
-  <div class="msg" id="ludoMsg">Yuklanmoqda…</div>
-  <canvas id="ludoCv" width="630" height="630"></canvas>
+
+  <div class="banner" id="ludoMsg">Yuklanmoqda…</div>
+  <div class="last" id="ludoLast"></div>
+  <div class="tbar" id="ludoTbar" hidden><b id="ludoTfill"></b></div>
+
+  <canvas id="ludoCv" width="840" height="840"></canvas>
+
+  <!-- Qo'shilish paneli -->
+  <div class="panel center" id="lJoin">
+    <h4>📖 Qoidalar</h4>
+    <div class="rules">
+      🎲 Toshni chiqarish uchun <b>6</b> tushishi kerak<br>
+      ⭐ Xavfsiz katak: u yerda tosh urilmaydi<br>
+      🚀 Raketa: <b>5 qadam</b> oldinga uchiradi<br>
+      💀 Tuzoq: toshni uyga qaytaradi<br>
+      6 tushsa yoki raqibni ursangiz, yana yurasiz<br>
+      ⏰ 90 soniya yurmasangiz o‘yindan chiqarilasiz<br>
+      ❌ 4 kishi 10 daqiqada to‘lmasa, xona yopiladi va tanga qaytadi
+    </div>
+    <button class="btn big" id="ludoJoin">🎟 Qo‘shilish (3 🪙)</button>
+  </div>
+
+  <!-- Kutish paneli -->
+  <div class="panel" id="lWait" hidden>
+    <h4 class="center">👥 Raqiblar kutilmoqda</h4>
+    <div id="ludoSlots"></div>
+    <div class="center mut" style="margin:10px 0">⏱ Xona <b id="ludoWt">10:00</b> dan keyin yopiladi</div>
+    <div class="center"><button class="btn red" id="ludoCancel">❌ Bekor qilish (3 🪙 qaytadi)</button></div>
+  </div>
+
+  <!-- O'yin paneli -->
+  <div id="lPlay" hidden>
+    <div class="rollrow">
+      <div class="dice" id="ludoDice"></div>
+      <button class="btn big" id="ludoRoll" disabled>🎲 Zar tashlash</button>
+    </div>
+    <div class="panel" id="ludoPlayers"></div>
+  </div>
+
   <div class="legend">
-    <span>⭐ xavfsiz katak</span>
-    <span>🚀 5 qadam oldinga</span>
+    <span>⭐ xavfsiz</span>
+    <span>🚀 +5 qadam</span>
     <span>💀 uyga qaytaradi</span>
   </div>
-  <div class="bar">
-    <button class="btn" id="ludoJoin">🎟 Qo‘shilish (3 🪙)</button>
-    <button class="btn" id="ludoRoll" disabled>🎲 Zar tashlash</button>
-  </div>
-  <div id="ludoPlayers"></div>
+
+  <div class="wo" id="ludoWo" hidden></div>
+  <div class="rain" id="ludoRain"></div>
 </div>
 
 <script>
 window.game_ludo = (function () {
-  var GAME = 'ludo';
-  var G = 21;          // taxta 21 x 21 katak
-  var HOME = 88;       // marra
+  var GAME = 'ludo', COST = 3, PRIZE = 11;
+  var G = 21, CS = 40, SIZE = G * CS;    // 21 x 21 katak, har biri 40px
+  var HOME = 88, TRACKN = 80;
   var COLORS = ['#e53935', '#43a047', '#f9a825', '#1e88e5'];
   var LIGHT  = ['#ffcdd2', '#c8e6c9', '#fff59d', '#bbdefb'];
+  var DARK   = ['#8e1b1b', '#1b5e20', '#a56a00', '#0d47a1'];
+  var FACES  = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-  // Maxsus kataklar (server ham aynan shuni yuboradi, bu zaxira nusxa)
   var DEFAULT_CFG = {
     start: [10, 30, 50, 70],
     stars: [3, 17, 23, 37, 43, 57, 63, 77],
@@ -70,7 +135,6 @@ window.game_ludo = (function () {
 
   function rot(cell) { return [cell[1], 20 - cell[0]]; }
 
-  // Har o'yinchining 8 katakli uy yo'lagi (markazga qarab)
   var LANE = [0, 1, 2, 3].map(function (p) {
     var out = [];
     for (var k = 1; k <= 8; k++) {
@@ -81,31 +145,128 @@ window.game_ludo = (function () {
     return out;
   });
 
-  // O'yinchilarning uylari [qator, ustun]
   var YARDS = [[2, 2], [2, 13], [13, 13], [13, 2]];
 
+  var TG = window.Telegram && window.Telegram.WebApp;
   var $ = function (id) { return document.getElementById(id); };
-  var cv = $('ludoCv');
-  var ctx = cv.getContext('2d');
+  var root = $('ludo'), cv = $('ludoCv'), ctx = cv.getContext('2d');
+  var bc = document.createElement('canvas');
+  bc.width = bc.height = SIZE;
 
   var roomId = null, view = null, timer = null, busy = false, gen = 0;
+  var active = false, raf = 0, recvAt = 0, lastRollN = null, rolling = false, rollTimer = null;
+  var autoT = null, finishedShown = null, lastT = 0, boardKey = '', anim = {};
 
   function ini() { return window.APP.initData; }
   function cfg() { return (view && view.cfg) || DEFAULT_CFG; }
+  function haptic(t) { try { TG.HapticFeedback.impactOccurred(t || 'light'); } catch (e) {} }
+  function hapticOk() { try { TG.HapticFeedback.notificationOccurred('success'); } catch (e) {} }
 
-  // Toshning joyi (katak birligida [x, y])
+  function ask(text, cb) {
+    if (TG && TG.showConfirm) {
+      try { TG.showConfirm(text, function (ok) { if (ok) cb(); }); return; } catch (e) {}
+    }
+    if (confirm(text)) cb();
+  }
+
+  // Telegram yuqori paneli (Yopish tugmasi) tugmalarni yopib qo'ymasligi uchun
+  function applyInsets() {
+    var top = 12;
+    try {
+      if (TG && TG.isFullscreen) {
+        var a = (TG.safeAreaInset && TG.safeAreaInset.top) || 0;
+        var b = (TG.contentSafeAreaInset && TG.contentSafeAreaInset.top) || 0;
+        top += (a + b) || 72;
+      }
+    } catch (e) {}
+    root.style.paddingTop = top + 'px';
+  }
+
+  /* ---------- Taxta chizish (bir marta, oldindan) ---------- */
+  function rr(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function cellBox(b, cell, fill, stroke) {
+    var x = cell[1] * CS, y = cell[0] * CS;
+    rr(b, x + 1.5, y + 1.5, CS - 3, CS - 3, 8);
+    b.fillStyle = fill; b.fill();
+    b.lineWidth = 1.5; b.strokeStyle = stroke; b.stroke();
+  }
+
+  function cellEmoji(b, ch, cell) {
+    b.font = Math.round(CS * 0.6) + 'px sans-serif';
+    b.textAlign = 'center';
+    b.textBaseline = 'middle';
+    b.fillStyle = '#000';
+    b.fillText(ch, (cell[1] + 0.5) * CS, (cell[0] + 0.55) * CS);
+  }
+
+  function buildBoard() {
+    var C = cfg(), key = JSON.stringify(C);
+    if (key === boardKey) return;
+    boardKey = key;
+    var b = bc.getContext('2d');
+    var gr = b.createLinearGradient(0, 0, SIZE, SIZE);
+    gr.addColorStop(0, '#f4f6ff'); gr.addColorStop(1, '#dbe2f5');
+    b.fillStyle = gr; b.fillRect(0, 0, SIZE, SIZE);
+
+    YARDS.forEach(function (y, p) {
+      var r = y[0], c = y[1];
+      b.fillStyle = COLORS[p]; rr(b, c * CS, r * CS, 6 * CS, 6 * CS, 0.9 * CS); b.fill();
+      b.fillStyle = '#fff'; rr(b, (c + 0.6) * CS, (r + 0.6) * CS, 4.8 * CS, 4.8 * CS, 0.6 * CS); b.fill();
+      for (var i = 0; i < 4; i++) {
+        b.beginPath();
+        b.arc((c + 1.5 + 3 * (i & 1)) * CS, (r + 1.5 + 3 * (i >> 1)) * CS, 0.62 * CS, 0, Math.PI * 2);
+        b.fillStyle = LIGHT[p]; b.fill();
+        b.lineWidth = 2; b.strokeStyle = COLORS[p]; b.stroke();
+      }
+    });
+
+    TRACK.forEach(function (cell) { cellBox(b, cell, '#ffffff', '#c9cfe6'); });
+    LANE.forEach(function (lane, p) {
+      lane.forEach(function (cell) { cellBox(b, cell, LIGHT[p], COLORS[p]); });
+    });
+
+    var tri = [[[9, 9], [12, 9]], [[12, 9], [12, 12]], [[12, 12], [9, 12]], [[9, 12], [9, 9]]];
+    tri.forEach(function (e, p) {
+      b.beginPath();
+      b.moveTo(e[0][0] * CS, e[0][1] * CS);
+      b.lineTo(e[1][0] * CS, e[1][1] * CS);
+      b.lineTo(10.5 * CS, 10.5 * CS);
+      b.closePath();
+      b.fillStyle = COLORS[p]; b.fill();
+    });
+    b.beginPath(); b.arc(10.5 * CS, 10.5 * CS, 0.75 * CS, 0, Math.PI * 2);
+    b.fillStyle = '#fff'; b.fill();
+    b.font = Math.round(CS * 0.9) + 'px sans-serif'; b.textAlign = 'center'; b.textBaseline = 'middle';
+    b.fillStyle = '#000'; b.fillText('🏆', 10.5 * CS, 10.6 * CS);
+
+    C.start.forEach(function (g, p) { cellBox(b, TRACK[g], COLORS[p], '#fff'); });
+    C.stars.forEach(function (g) { cellBox(b, TRACK[g], '#fff3c4', '#e0b800'); cellEmoji(b, '⭐', TRACK[g]); });
+    C.traps.forEach(function (g) { cellBox(b, TRACK[g], '#ffd9d9', '#e57373'); cellEmoji(b, '💀', TRACK[g]); });
+    C.rockets.forEach(function (g) { cellBox(b, TRACK[g], '#d9eeff', '#64b5f6'); cellEmoji(b, '🚀', TRACK[g]); });
+  }
+
+  /* ---------- Toshlar ---------- */
   function tokenPos(p, t, i) {
     var C = cfg();
     if (t === -1) {
       var y = YARDS[p];
       return [y[1] + 1.5 + 3 * (i & 1), y[0] + 1.5 + 3 * (i >> 1)];
     }
-    if (t < 80) {
-      var cell = TRACK[(C.start[p] + t) % 80];
+    if (t < TRACKN) {
+      var cell = TRACK[(C.start[p] + t) % TRACKN];
       return [cell[1] + 0.5, cell[0] + 0.5];
     }
     if (t < HOME) {
-      var l = LANE[p][t - 80];
+      var l = LANE[p][t - TRACKN];
       return [l[1] + 0.5, l[0] + 0.5];
     }
     var d = (i - 1.5) * 0.33;
@@ -115,112 +276,15 @@ window.game_ludo = (function () {
     return [9.6, 10.5 + d];
   }
 
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  function emoji(ch, cell, s) {
-    ctx.font = Math.round(s * 0.62) + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#000';
-    ctx.fillText(ch, (cell[1] + 0.5) * s, (cell[0] + 0.55) * s);
-  }
-
-  function draw() {
-    var s = cv.width / G;
-    var C = cfg();
-    ctx.fillStyle = '#e9edf7';
-    ctx.fillRect(0, 0, cv.width, cv.height);
-
-    // Uylar
-    YARDS.forEach(function (y, p) {
-      var r = y[0], c = y[1];
-      ctx.fillStyle = COLORS[p];
-      roundRect(c * s, r * s, 6 * s, 6 * s, 0.9 * s); ctx.fill();
-      ctx.fillStyle = '#fff';
-      roundRect((c + 0.7) * s, (r + 0.7) * s, 4.6 * s, 4.6 * s, 0.6 * s); ctx.fill();
-      for (var i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.arc((c + 1.5 + 3 * (i & 1)) * s, (r + 1.5 + 3 * (i >> 1)) * s, 0.55 * s, 0, Math.PI * 2);
-        ctx.fillStyle = LIGHT[p]; ctx.fill();
-      }
-    });
-
-    // Halqa
-    ctx.strokeStyle = '#c5cbe0'; ctx.lineWidth = 1;
-    TRACK.forEach(function (cell) {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-      ctx.strokeRect(cell[1] * s, cell[0] * s, s, s);
-    });
-
-    // Uy yo'laklari
-    LANE.forEach(function (lane, p) {
-      lane.forEach(function (cell) {
-        ctx.fillStyle = LIGHT[p];
-        ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-        ctx.strokeStyle = COLORS[p];
-        ctx.strokeRect(cell[1] * s, cell[0] * s, s, s);
-      });
-    });
-
-    // Markaz (marra)
-    var tri = [
-      [[9, 9], [12, 9]], [[12, 9], [12, 12]], [[12, 12], [9, 12]], [[9, 12], [9, 9]]
-    ];
-    tri.forEach(function (e, p) {
-      ctx.beginPath();
-      ctx.moveTo(e[0][0] * s, e[0][1] * s);
-      ctx.lineTo(e[1][0] * s, e[1][1] * s);
-      ctx.lineTo(10.5 * s, 10.5 * s);
-      ctx.closePath();
-      ctx.fillStyle = COLORS[p]; ctx.fill();
-    });
-
-    // Maxsus kataklar
-    C.start.forEach(function (g, p) {
-      var cell = TRACK[g];
-      ctx.fillStyle = COLORS[p];
-      ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-      ctx.strokeStyle = '#fff';
-      ctx.strokeRect(cell[1] * s, cell[0] * s, s, s);
-    });
-    C.stars.forEach(function (g) {
-      var cell = TRACK[g];
-      ctx.fillStyle = '#fff8d6';
-      ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-      emoji('⭐', cell, s);
-    });
-    C.traps.forEach(function (g) {
-      var cell = TRACK[g];
-      ctx.fillStyle = '#ffd6d6';
-      ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-      emoji('💀', cell, s);
-    });
-    C.rockets.forEach(function (g) {
-      var cell = TRACK[g];
-      ctx.fillStyle = '#d6ecff';
-      ctx.fillRect(cell[1] * s, cell[0] * s, s, s);
-      emoji('🚀', cell, s);
-    });
-
-    // Toshlar
-    if (!view || !view.state || !view.state.tokens) return;
-    var S = view.state;
-    var seen = {};
-    var offs = [[0, 0], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]];
-    var legalDraw = [];
-
+  function collectTokens() {
+    var S = (view && view.state) || {};
+    var tokens = S.tokens || [[-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1]];
+    var items = [], seen = {};
+    var offs = [[0, 0], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]];
     for (var p = 0; p < 4; p++) {
+      if (S.out && S.out[p]) continue;
       for (var i = 0; i < 4; i++) {
-        var t = S.tokens[p][i];
+        var t = tokens[p][i];
         var pos = tokenPos(p, t, i);
         if (t >= 0 && t < HOME) {
           var key = Math.round(pos[0] * 2) + ',' + Math.round(pos[1] * 2);
@@ -228,68 +292,227 @@ window.game_ludo = (function () {
           seen[key] = k + 1;
           pos = [pos[0] + offs[k % 4][0], pos[1] + offs[k % 4][1]];
         }
-        var legal = p === view.seat && view.legal.indexOf(i) >= 0;
-        var item = { p: p, t: t, pos: pos, legal: legal };
-        if (legal) legalDraw.push(item); else drawToken(item, s);
+        var legal = !!view && p === view.seat && view.legal.indexOf(i) >= 0;
+        var id = p + ',' + i;
+        var a = anim[id];
+        if (!a) { a = anim[id] = { x: pos[0], y: pos[1] }; }
+        a.x += (pos[0] - a.x) * 0.22;
+        a.y += (pos[1] - a.y) * 0.22;
+        if (Math.abs(pos[0] - a.x) < 0.01) a.x = pos[0];
+        if (Math.abs(pos[1] - a.y) < 0.01) a.y = pos[1];
+        items.push({ p: p, i: i, t: t, x: a.x, y: a.y, legal: legal });
       }
     }
-    legalDraw.forEach(function (it) { drawToken(it, s); });
+    items.sort(function (a, b) { return (a.legal - b.legal) || (a.y - b.y); });
+    return items;
   }
 
-  function drawToken(it, s) {
-    var r = (it.t === HOME ? 0.2 : 0.32) * s;
+  function drawToken(it, ts) {
+    var x = it.x * CS, y = it.y * CS, r = (it.t === HOME ? 0.22 : 0.34) * CS;
+    var lift = it.legal ? Math.abs(Math.sin(ts / 220)) * 5 : 0;
     ctx.beginPath();
-    ctx.arc(it.pos[0] * s, it.pos[1] * s, r, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS[it.p]; ctx.fill();
-    ctx.lineWidth = it.legal ? 4 : 2;
-    ctx.strokeStyle = it.legal ? '#ffeb3b' : '#fff';
-    ctx.stroke();
+    ctx.ellipse(x, y + r * 0.75, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill();
+    if (it.legal) {
+      ctx.save();
+      ctx.shadowColor = '#ffeb3b'; ctx.shadowBlur = 20;
+      ctx.beginPath(); ctx.arc(x, y - lift, r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffeb3b'; ctx.fill();
+      ctx.restore();
+    }
+    var g = ctx.createRadialGradient(x - r * 0.3, y - lift - r * 0.35, r * 0.1, x, y - lift, r);
+    g.addColorStop(0, LIGHT[it.p]); g.addColorStop(0.45, COLORS[it.p]); g.addColorStop(1, DARK[it.p]);
+    ctx.beginPath(); ctx.arc(x, y - lift, r, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+  }
+
+  function frame(ts) {
+    if (!active) return;
+    raf = requestAnimationFrame(frame);
+    buildBoard();
+    ctx.drawImage(bc, 0, 0);
+    collectTokens().forEach(function (it) { drawToken(it, ts); });
+    updateTimers(ts);
+  }
+
+  function updateTimers(ts) {
+    if (!view || ts - lastT < 250) return;
+    lastT = ts;
+    var el = (performance.now() - recvAt) / 1000;
+    if (view.status === 'playing') {
+      var left = Math.max(0, view.turnLeft - el);
+      var pct = Math.max(0, Math.min(100, left / view.afk * 100));
+      var f = $('ludoTfill');
+      f.style.width = pct + '%';
+      f.style.background = pct < 25 ? '#e53935' : (pct < 55 ? '#f9a825' : '#43a047');
+    } else if (view.status === 'waiting') {
+      var w = Math.max(0, Math.round(view.waitLeft - el));
+      var m = Math.floor(w / 60), s = w % 60;
+      $('ludoWt').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+  }
+
+  /* ---------- Zar ---------- */
+  function setFace(n, by) {
+    var d = $('ludoDice');
+    if (!d.children.length) {
+      for (var k = 0; k < 9; k++) d.appendChild(document.createElement('i'));
+    }
+    var on = FACES[n] || [];
+    for (var j = 0; j < 9; j++) d.children[j].className = on.indexOf(j) >= 0 ? 'on' : '';
+    if (by != null) d.style.borderColor = COLORS[by];
+  }
+
+  function startRolling() {
+    if (rolling) return;
+    rolling = true;
+    $('ludoDice').classList.add('rolling');
+    rollTimer = setInterval(function () { setFace(1 + Math.floor(Math.random() * 6)); }, 90);
+    haptic('light');
+  }
+
+  function stopRolling(n, by) {
+    clearInterval(rollTimer);
+    rolling = false;
+    $('ludoDice').classList.remove('rolling');
+    if (n) setFace(n, by);
+  }
+
+  function animateRoll(n, by) {
+    startRolling();
+    setTimeout(function () { stopRolling(n, by); haptic('medium'); }, 450);
+  }
+
+  /* ---------- Ko'rinish ---------- */
+  function playersHtml(V, S, waiting) {
+    var out = '';
+    for (var p = 0; p < V.max; p++) {
+      var nm = V.names[p];
+      if (waiting && !nm) {
+        out += '<div class="pl slot"><span><span class="dot" style="background:#39406a"></span>Bo‘sh joy…</span><span>⏳</span></div>';
+        continue;
+      }
+      var isOut = !waiting && S.out && S.out[p];
+      var turn = !waiting && V.status === 'playing' && S.turn === p && !isOut;
+      var home = (!waiting && S.tokens) ? S.tokens[p].filter(function (x) { return x === HOME; }).length : 0;
+      var right = waiting ? '✅' : (isOut ? '🚪 chiqdi' : ((turn ? '🎯 ' : '') + '🏠 ' + home + '/4'));
+      out += '<div class="pl' + (turn ? ' turn' : '') + '" style="--c:' + COLORS[p] + ';' + (isOut ? 'opacity:.5' : '') + '">' +
+        '<span><span class="dot" style="background:' + COLORS[p] + '"></span>' + window.esc(nm || '—') +
+        (p === V.seat ? ' <em>(siz)</em>' : '') + '</span><span class="mut">' + right + '</span></div>';
+    }
+    return out;
   }
 
   function render() {
-    var V = view, S = V ? V.state : {};
-    var msg = $('ludoMsg'), rollBtn = $('ludoRoll'), joinBtn = $('ludoJoin');
+    var V = view, S = (V && V.state) || {}, st = V ? V.status : '';
+    var wait = st === 'waiting', playing = st === 'playing', fin = st === 'finished';
 
-    joinBtn.style.display = (roomId && (!V || V.status !== 'finished')) ? 'none' : '';
+    $('lJoin').hidden = !!roomId && !fin;
+    $('lWait').hidden = !wait;
+    $('lPlay').hidden = !(playing || fin);
+    $('ludoLeave').hidden = !(wait || playing);
+    $('ludoTbar').hidden = !playing;
 
-    if (!roomId) msg.textContent = 'O‘yinga qo‘shiling. G‘olib 11 🪙 oladi!';
-    else if (!V) msg.textContent = 'Yuklanmoqda…';
-    else if (V.status === 'waiting') msg.textContent = 'Kutilmoqda: ' + V.names.length + '/4 o‘yinchi. To‘lganda o‘yin boshlanadi.';
-    else if (V.status === 'finished') {
-      msg.textContent = S.winner === V.seat
-        ? '🎉 Tabriklaymiz, siz g‘olib bo‘ldingiz!'
-        : '🏆 G‘olib: ' + (V.names[S.winner] || '');
-    } else {
+    var msg;
+    if (!roomId) msg = 'Xush kelibsiz! G‘olib ' + PRIZE + ' 🪙 oladi';
+    else if (!V) msg = 'Yuklanmoqda…';
+    else if (wait) msg = '⏳ Raqiblar kutilmoqda: ' + V.names.length + '/' + V.max;
+    else if (fin) msg = S.winner === V.seat ? '🎉 Tabriklaymiz, siz g‘olibsiz!' : '🏆 G‘olib: ' + (V.names[S.winner] || '—');
+    else {
       var my = V.seat === S.turn;
-      msg.textContent = (my ? '👉 Sizning navbatingiz' : '⏳ ' + V.names[S.turn] + ' yuradi') + (S.last ? '\n' + S.last : '');
+      msg = my ? (S.dice != null ? '👆 Toshni tanlang' : '👉 Sizning navbatingiz, zarni tashlang')
+               : '⏳ ' + (V.names[S.turn] || '') + ' yuryapti';
     }
+    $('ludoMsg').textContent = msg;
+    $('ludoLast').textContent = ((playing || fin) && S.last) ? S.last : '';
 
-    rollBtn.textContent = S.dice ? '🎲 ' + S.dice : '🎲 Zar tashlash';
-    rollBtn.disabled = !(V && V.status === 'playing' && V.seat === S.turn && S.dice == null);
+    var canRoll = !!V && playing && V.seat === S.turn && S.dice == null;
+    var rb = $('ludoRoll');
+    rb.disabled = !canRoll;
+    rb.classList.toggle('pulse', canRoll);
 
-    $('ludoPlayers').innerHTML = V ? V.names.map(function (n, p) {
-      return '<div class="pl"><span><span class="dot" style="background:' + COLORS[p] + '"></span>' +
-        window.esc(n) + (p === V.seat ? ' (siz)' : '') + '</span>' +
-        '<span>' + (V.status === 'playing' && S.turn === p ? '🎯' : '') + '</span></div>';
-    }).join('') : '';
+    if (V && wait) $('ludoSlots').innerHTML = playersHtml(V, S, true);
+    if (V && (playing || fin)) $('ludoPlayers').innerHTML = playersHtml(V, S, false);
 
-    draw();
+    $('ludoJoin').textContent = '🎟 Qo‘shilish (' + COST + ' 🪙)';
   }
 
+  function showRain(emojis) {
+    var r = $('ludoRain');
+    var h = '';
+    for (var i = 0; i < 36; i++) {
+      h += '<span style="left:' + (Math.random() * 100) + '%;animation-duration:' + (2 + Math.random() * 2.5) +
+        's;animation-delay:' + (Math.random() * 0.8) + 's">' + emojis[i % emojis.length] + '</span>';
+    }
+    r.innerHTML = h;
+    setTimeout(function () { r.innerHTML = ''; }, 5500);
+  }
+
+  function showWin() {
+    var V = view, S = V.state, me = S.winner === V.seat;
+    var box = $('ludoWo');
+    box.innerHTML = '<div class="box"><div class="big">' + (me ? '🏆' : '🎲') + '</div>' +
+      '<h3 style="margin:10px 0">' + (me ? 'G‘alaba! +' + PRIZE + ' 🪙' : 'O‘yin tugadi') + '</h3>' +
+      '<div class="mut" style="margin-bottom:16px">' + (me ? 'Tabriklaymiz!' : 'G‘olib: ' + window.esc(V.names[S.winner] || '—')) + '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+      '<button class="btn" id="woAgain">🎲 Yana o‘ynash</button>' +
+      '<button class="btn ghost" id="woHome">🏠 Bosh sahifa</button></div></div>';
+    box.hidden = false;
+    $('woAgain').onclick = function () { box.hidden = true; newGame(); };
+    $('woHome').onclick = function () { box.hidden = true; goHome(); };
+    if (me) { hapticOk(); showRain(['🎉', '🪙', '⭐', '🏆']); }
+  }
+
+  /* ---------- Holatni qabul qilish ---------- */
   function applyView(v) {
     view = v;
+    recvAt = performance.now();
+
+    if (v.status === 'cancelled') {
+      stopPoll(); roomId = null; view = null; lastRollN = null;
+      window.toast('Kutish vaqti tugadi. Tangalar qaytarildi 🪙');
+      if (window.refreshApp) window.refreshApp();
+      render();
+      return;
+    }
+
+    var S = v.state || {};
+    if (S.rollN != null && S.rollN !== lastRollN) {
+      var first = lastRollN === null;
+      lastRollN = S.rollN;
+      if (first) setFace(S.rolled || 1, S.rollBy);
+      else if (S.rolled) animateRoll(S.rolled, S.rollBy);
+    } else if (S.rollN == null && v.status === 'playing' && lastRollN === null) {
+      lastRollN = 0;
+      setFace(1);
+    }
+
     render();
+
     if (v.status === 'finished') {
       stopPoll();
       if (window.refreshApp) window.refreshApp();
+      if (finishedShown !== roomId) { finishedShown = roomId; showWin(); }
+    }
+    maybeAuto();
+  }
+
+  // Faqat bitta yurish imkoni bo'lsa, o'zi yuradi
+  function maybeAuto() {
+    clearTimeout(autoT);
+    if (view && view.status === 'playing' && view.legal && view.legal.length === 1) {
+      autoT = setTimeout(function () {
+        if (view && view.legal && view.legal.length === 1) moveToken(view.legal[0]);
+      }, 650);
     }
   }
 
-  function act(fn) {
+  function act(fn, onFail) {
     if (busy) return;
     busy = true;
     fn().then(applyView)
-      .catch(function (e) { window.toast(e.message); })
+      .catch(function (e) { window.toast(e.message); if (onFail) onFail(); })
       .then(function () { busy = false; });
   }
 
@@ -298,7 +521,7 @@ window.game_ludo = (function () {
     busy = true;
     window.gcall('joinRoom', ini(), GAME).then(function (r) {
       roomId = r.roomId;
-      view = null;
+      view = null; lastRollN = null; anim = {};
       window.toast('Xonaga qo‘shildingiz');
       if (window.refreshApp) window.refreshApp();
       render();
@@ -307,23 +530,61 @@ window.game_ludo = (function () {
       .then(function () { busy = false; });
   }
 
-  function rollDice() { act(function () { return window.gcall('rollDice', ini(), roomId); }); }
-  function moveToken(i) { act(function () { return window.gcall('moveToken', ini(), roomId, i); }); }
+  function newGame() {
+    roomId = null; view = null; lastRollN = null;
+    render();
+    joinGame();
+  }
 
+  function leave() {
+    if (!roomId || busy) return;
+    var w = view && view.status === 'waiting';
+    ask(w ? 'Xonadan chiqasizmi? ' + COST + ' 🪙 qaytariladi.'
+          : 'O‘yindan chiqsangiz yutqazasiz va tanga qaytmaydi. Chiqasizmi?', function () {
+      busy = true;
+      window.gcall('leaveRoom', ini(), roomId).then(function (r) {
+        stopPoll(); clearTimeout(autoT);
+        roomId = null; view = null; lastRollN = null; anim = {};
+        window.toast(r && r.refund ? '🪙 ' + r.refund + ' qaytarildi' : 'O‘yindan chiqdingiz');
+        if (window.refreshApp) window.refreshApp();
+        render();
+      }).catch(function (e) { window.toast(e.message); })
+        .then(function () { busy = false; });
+    });
+  }
+
+  function goHome() {
+    if (view && view.status === 'playing') window.toast('O‘yin davom etmoqda, navbatni o‘tkazib yubormang!');
+    window.closeGame(GAME);
+  }
+
+  function rollDice() {
+    if (busy) return;
+    startRolling();
+    act(function () { return window.gcall('rollDice', ini(), roomId); }, function () { stopRolling(); });
+  }
+
+  function moveToken(i) {
+    act(function () { return window.gcall('moveToken', ini(), roomId, i); });
+    haptic('light');
+  }
+
+  /* ---------- So'rov (polling) ---------- */
   function startPoll() { gen++; clearTimeout(timer); tick(gen); }
   function stopPoll() { gen++; clearTimeout(timer); }
   function tick(g) {
     if (g !== gen || !roomId) return;
     window.gcall('getRoomState', ini(), roomId)
-      .then(function (v) { if (g === gen) applyView(v); })
+      .then(function (v) { if (g === gen && !busy) applyView(v); })
       .catch(function () {})
       .then(function () {
-        if (g === gen && (!view || view.status !== 'finished')) {
-          timer = setTimeout(function () { tick(g); }, 1500);
+        if (g === gen && (!view || (view.status !== 'finished' && view.status !== 'cancelled'))) {
+          timer = setTimeout(function () { tick(g); }, (view && view.status === 'waiting') ? 2500 : 1500);
         }
       });
   }
 
+  /* ---------- Tosh tanlash (bosish) ---------- */
   cv.addEventListener('click', function (e) {
     if (!view || view.status !== 'playing' || !view.legal || !view.legal.length) return;
     if (view.legal.length === 1) return moveToken(view.legal[0]);
@@ -332,15 +593,26 @@ window.game_ludo = (function () {
     var y = (e.clientY - rect.top) / rect.height * G;
     var best = -1, bd = 1e9;
     view.legal.forEach(function (i) {
-      var pos = tokenPos(view.seat, view.state.tokens[view.seat][i], i);
+      var a = anim[view.seat + ',' + i];
+      var pos = a ? [a.x, a.y] : tokenPos(view.seat, view.state.tokens[view.seat][i], i);
       var d = Math.hypot(pos[0] - x, pos[1] - y);
       if (d < bd) { bd = d; best = i; }
     });
-    if (bd < 1.4) moveToken(best);
+    if (bd < 1.6) moveToken(best);
   });
 
+  /* ---------- Ochish / yopish ---------- */
+  var backH = function () { goHome(); };
+
   function open() {
-    view = null;
+    active = true;
+    applyInsets();
+    view = null; lastRollN = null; anim = {};
+    $('ludoWo').hidden = true;
+    setFace(1);
+    try { if (TG && TG.BackButton) { TG.BackButton.onClick(backH); TG.BackButton.show(); } } catch (e) {}
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
     render();
     window.gcall('getMyRoom', ini(), GAME).then(function (id) {
       roomId = id;
@@ -348,11 +620,21 @@ window.game_ludo = (function () {
     }).catch(function (e) { window.toast(e.message); });
   }
 
-  function close() { stopPoll(); }
+  function close() {
+    active = false;
+    cancelAnimationFrame(raf);
+    stopPoll();
+    clearTimeout(autoT);
+    stopRolling();
+    try { if (TG && TG.BackButton) { TG.BackButton.offClick(backH); TG.BackButton.hide(); } } catch (e) {}
+  }
 
   $('ludoJoin').onclick = joinGame;
   $('ludoRoll').onclick = rollDice;
-  $('ludoBack').onclick = function () { window.closeGame('ludo'); };
+  $('ludoHome').onclick = goHome;
+  $('ludoLeave').onclick = leave;
+  $('ludoCancel').onclick = leave;
+  setFace(1);
   render();
 
   return { open: open, close: close };
