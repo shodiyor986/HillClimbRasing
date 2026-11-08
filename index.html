@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>O'yin Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { --bg:#0f1220; --card:#1a1f35; --acc:#7c5cff; --gold:#ffc83d; --txt:#fff; --mut:#9aa3c7; }
+    [hidden] { display: none !important; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--txt); padding-bottom: 92px; min-height: 100vh; }
+    header { position: sticky; top: 0; z-index: 5; background: var(--card); padding: 12px 16px;
+             display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px #0006; }
+    .coins { background: #2b2350; padding: 6px 12px; border-radius: 20px; color: var(--gold); font-weight: 700; }
+    .page { display: none; padding: 14px; }
+    .page.active { display: block; }
+    .card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .mut { color: var(--mut); font-size: 13px; }
+    .btn { background: var(--acc); color: #fff; border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
+    .btn:disabled { opacity: .4; }
+    h3 { margin: 6px 0 10px; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); display: flex;
+          justify-content: space-around; align-items: flex-end; padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+          box-shadow: 0 -2px 10px #0006; z-index: 10; }
+    nav button { background: none; border: 0; color: var(--mut); font-size: 12px; flex: 1;
+                 display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    nav button.active { color: #fff; }
+    nav .ic { font-size: 22px; line-height: 1; }
+    nav button.center .ic { width: 58px; height: 58px; border-radius: 50%; background: var(--acc);
+                            display: flex; align-items: center; justify-content: center; font-size: 28px;
+                            margin-top: -28px; box-shadow: 0 6px 16px #7c5cff99; }
+    .overlay { position: fixed; inset: 0; background: #000d; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; gap: 12px; z-index: 50; font-size: 18px; }
+    .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #2b3150;
+             padding: 10px 16px; border-radius: 12px; z-index: 60; max-width: 90%; text-align: center; }
+    .game-screen { position: fixed; inset: 0; background: var(--bg); z-index: 30; overflow: auto; padding: 14px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <b id="uname">Yuklanmoqda…</b>
+      <div class="mut" id="urank"></div>
+    </div>
+    <div class="coins">🪙 <span id="ucoins">0</span></div>
+  </header>
+
+  <!-- VAZIFALAR -->
+  <section class="page" id="p-tasks">
+    <h3>✅ Vazifalar</h3>
+    <div id="tasks"></div>
+  </section>
+
+  <!-- O'YINLAR (markaz) -->
+  <section class="page active" id="p-games">
+    <h3>🎮 O‘yinlar</h3>
+    <div id="games"></div>
+  </section>
+
+  <!-- PROFIL + REYTING -->
+  <section class="page" id="p-profile">
+    <div class="card">
+      <div class="row">
+        <div><b id="pname"></b><div class="mut" id="pun"></div></div>
+        <div class="coins">🪙 <span id="pcoins"></span></div>
+      </div>
+      <div class="mut" style="margin-top:8px">O‘rin: <b id="prank"></b> · G‘alabalar: <b id="pwins"></b></div>
+    </div>
+    <h3>🏆 Reyting</h3>
+    <div class="card" id="lb"></div>
+  </section>
+
+  <nav>
+    <button data-page="tasks"><span class="ic">✅</span>Vazifalar</button>
+    <button data-page="games" class="center"><span class="ic">🎮</span>O‘yinlar</button>
+    <button data-page="profile"><span class="ic">👤</span>Profil</button>
+  </nav>
+
+  <div class="overlay" id="adbox" hidden>
+    <div>📺 Reklama yuklanmoqda…</div>
+    <div style="font-size:40px" id="adsec">5</div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- O'yin ekranlari shu yerga avtomatik qo'shiladi -->
+  <div id="gameScreens"></div>
+
+<script>
+  // ============================================================
+  // MUHIM: Apps Script deploy qilingandan keyin chiqqan URL ni shu yerga yozing
+  // (https://script.google.com/macros/s/.../exec)
+  // ============================================================
+  var API_URL = 'SHU_YERGA_APPS_SCRIPT_URL_NI_YOZING';
+
+  var TG = window.Telegram && window.Telegram.WebApp;
+  if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
+
+  // Telegram foydalanuvchi ma'lumoti (imzolangan). Server shu orqali foydalanuvchini aniqlaydi
+  window.APP = { initData: (TG && TG.initData) || '' };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  };
+  window.esc = esc;
+
+  // Serverga so'rov (Google Apps Script API). Content-Type berilmaydi, shunda brauzer
+  // oldindan tekshiruv (CORS preflight) yubormaydi va Apps Script ishlaydi
+  function gcall(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ fn: fn, args: args })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.error || 'Server xatosi');
+        return j.data;
+      });
+  }
+  window.gcall = gcall;
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.hidden = true; }, 2800);
+  }
+  window.toast = toast;
+
+  // ---------- Ma'lumotlarni yuklash ----------
+  var DATA = null;
+  function refresh() {
+    return gcall('getAppData', APP.initData).then(function (d) {
+      DATA = d;
+      render();
+    }).catch(function (e) { toast('⚠️ ' + e.message); });
+  }
+  window.refreshApp = refresh;
+
+  function render() {
+    if (!DATA) return;
+    var d = DATA, m = d.me;
+    $('uname').textContent = m.name;
+    $('urank').textContent = '🏆 Reyting: #' + m.rank;
+    $('ucoins').textContent = m.coins;
+    $('pname').textContent = m.name;
+    $('pun').textContent = m.username ? '@' + m.username : '';
+    $('pcoins').textContent = m.coins;
+    $('prank').textContent = '#' + m.rank;
+    $('pwins').textContent = m.wins;
+
+    $('tasks').innerHTML = d.tasks.map(function (t) {
+      var full = t.done >= t.limit;
+      return '<div class="card row">' +
+        '<div><b>' + esc(t.title) + '</b><div class="mut">+' + t.reward + ' 🪙 · bugun ' + t.done + '/' + t.limit + '</div></div>' +
+        '<button class="btn" ' + (full ? 'disabled' : '') + ' onclick="watchAd(\'' + esc(t.id) + '\')">' + (full ? 'Tugadi' : 'Ko‘rish') + '</button>' +
+        '</div>';
+    }).join('') || '<div class="card mut">Hozircha vazifa yo‘q</div>';
+
+    $('games').innerHTML = d.games.map(function (g) {
+      return '<div class="card row" style="cursor:pointer" onclick="openGame(\'' + esc(g.id) + '\')">' +
+        '<div style="font-size:34px">' + esc(g.icon) + '</div>' +
+        '<div style="flex:1"><b>' + esc(g.name) + '</b>' +
+        '<div class="mut">' + esc(g.description) + '</div>' +
+        '<div class="mut">🎟 ' + g.cost + ' 🪙 · 🏆 ' + g.prize + ' 🪙</div></div>' +
+        '<span style="font-size:20px">▶</span></div>';
+    }).join('') || '<div class="card mut">O‘yinlar yo‘q</div>';
+
+    $('lb').innerHTML = d.leaderboard.map(function (u, i) {
+      return '<div class="row" style="padding:7px 4px;' + (u.me ? 'color:var(--gold);font-weight:700' : '') + '">' +
+        '<span>' + (i + 1) + '. ' + esc(u.name) + '</span><span>🪙 ' + u.coins + '</span></div>';
+    }).join('');
+  }
+
+  // ---------- Reklama (vazifa) ----------
+  // Haqiqiy reklama tarmog'i SDK sini shu yerga ulang
+  var adTimer = null;
+  function watchAd(taskId) {
+    $('adbox').hidden = false;
+    var n = 5;
+    $('adsec').textContent = n;
+    clearInterval(adTimer);
+    adTimer = setInterval(function () {
+      n--;
+      $('adsec').textContent = n;
+      if (n <= 0) {
+        clearInterval(adTimer);
+        $('adbox').hidden = true;
+        claim(taskId);
+      }
+    }, 1000);
+  }
+  window.watchAd = watchAd;
+
+  function claim(taskId) {
+    gcall('claimTask', APP.initData, taskId).then(function (r) {
+      toast('+' + r.reward + ' 🪙 qo‘shildi!');
+      refresh();
+    }).catch(function (e) { toast('⚠️ ' + e.message); });
+  }
+
+  // ---------- Sahifalar ----------
+  function showPage(p) {
+    document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('active', x.id === 'p-' + p); });
+    document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('active', x.dataset.page === p); });
+  }
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.onclick = function () { showPage(b.dataset.page); };
+  });
+
+  // ---------- O'yin fayllarini avtomatik yuklash ----------
+  // Games jadvalidagi "file" ustuni (masalan B1) bo'yicha B1.html yuklanadi.
+  // Yangi o'yin qo'shilsa, bosh sahifada avtomatik paydo bo'ladi.
+  var loaded = {};
+
+  function loadGame(g) {
+    if (loaded[g.id]) return loaded[g.id];
+    var screen = document.createElement('div');
+    screen.className = 'game-screen';
+    screen.id = 'screen-' + g.id;
+    screen.hidden = true;
+    $('gameScreens').appendChild(screen);
+
+    loaded[g.id] = fetch(g.file + '.html?v=' + Date.now())
+      .then(function (r) {
+        if (!r.ok) throw new Error(g.file + '.html topilmadi');
+        return r.text();
+      })
+      .then(function (html) {
+        var box = document.createElement('div');
+        box.innerHTML = html;
+        var scripts = Array.prototype.slice.call(box.querySelectorAll('script'));
+        scripts.forEach(function (s) { s.parentNode.removeChild(s); });
+        while (box.firstChild) screen.appendChild(box.firstChild); // HTML va style joylanadi
+        scripts.forEach(function (old) {                           // script alohida ishga tushiriladi
+          var s = document.createElement('script');
+          s.textContent = old.textContent;
+          document.body.appendChild(s);
+        });
+      })
+      .catch(function (e) {
+        delete loaded[g.id];
+        screen.remove();
+        throw e;
+      });
+    return loaded[g.id];
+  }
+
+  function openGame(id) {
+    var g = DATA && DATA.games.filter(function (x) { return x.id === id; })[0];
+    if (!g) { toast('O‘yin topilmadi'); return; }
+    loadGame(g).then(function () {
+      $('screen-' + id).hidden = false;
+      var api = window['game_' + id];
+      if (api && api.open) api.open();
+    }).catch(function (e) { toast('⚠️ ' + e.message); });
+  }
+
+  function closeGame(id) {
+    var el = $('screen-' + id);
+    if (el) el.hidden = true;
+    var api = window['game_' + id];
+    if (api && api.close) api.close();
+    refresh();
+  }
+  window.openGame = openGame;
+  window.closeGame = closeGame;
+
+  // ---------- Ishga tushirish ----------
+  showPage('games');
+  if (!APP.initData) {
+    $('uname').textContent = 'Telegram aniqlanmadi';
+    toast('Iltimos, botni Telegram ichidan oching');
+  } else if (API_URL.indexOf('SHU_YERGA') === 0) {
+    $('uname').textContent = 'API_URL yozilmagan';
+    toast('index.html ichida API_URL ni yozing');
+  } else {
+    refresh();
+  }
+</script>
+</body>
+</html>
