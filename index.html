@@ -94,13 +94,13 @@
   // MUHIM: Apps Script deploy qilingandan keyin chiqqan URL ni shu yerga yozing
   // (https://script.google.com/macros/s/.../exec)
   // ============================================================
-  var API_URL = 'https://script.google.com/macros/s/AKfycbx3zSWcel7SjsKFi3b6tUZOza-Y7FaVFesYB2-4OvN7rRZeKjwohkJ93wuRCNAUGGCp/exechttps://script.google.com/macros/s/AKfycbx3zSWcel7SjsKFi3b6tUZOza-Y7FaVFesYB2-4OvN7rRZeKjwohkJ93wuRCNAUGGCp/exec';
+  var API_URL = 'SHEET_ID: '1q2xj1_Pn-Au3QtMsmNOLI6YAJQKIrO9Q_mkX0AosWFM'';
 
   var TG = window.Telegram && window.Telegram.WebApp;
   if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
 
   // Telegram foydalanuvchi ma'lumoti (imzolangan). Server shu orqali foydalanuvchini aniqlaydi
-  window.APP = { initData: (TG && TG.initData) || '' };
+  window.APP = { initData: (TG && TG.initData) || 'https://script.google.com/macros/s/AKfycbx1lmkyETJ1YYCpU3cAylORiptKxfcCIIH6m2bzmVFOuBIw4ADoZ2iCPPA2PdTQF7dd_Q/exec' };
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) {
