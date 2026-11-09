@@ -2,115 +2,254 @@
 <html lang="uz">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>O'yin Bot</title>
+  <title>Galaxy Arena</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root { --bg:#0f1220; --card:#1a1f35; --acc:#7c5cff; --gold:#ffc83d; --txt:#fff; --mut:#9aa3c7; }
+    :root { --bg:#12062e; --card:#ffffff14; --acc:#8b5cf6; --pink:#ff3d9a; --cyan:#22d3ee; --gold:#ffd54a;
+            --txt:#fff; --mut:#c4b5fd; }
     [hidden] { display: none !important; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--txt); padding-bottom: 92px; min-height: 100vh; }
-    header { position: sticky; top: 0; z-index: 5; background: var(--card); padding: 12px 16px;
-             display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px #0006; }
-    .coins { background: #2b2350; padding: 6px 12px; border-radius: 20px; color: var(--gold); font-weight: 700; }
-    .page { display: none; padding: 14px; }
-    .page.active { display: block; }
-    .card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    html, body { height: 100%; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--txt);
+           overflow: hidden; user-select: none; -webkit-user-select: none; }
+    #bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; }
+
+    /* ---------- Tanga belgisi (o'yinning o'z tangasi: Nova) ---------- */
+    .coin { display: inline-block; width: 1em; height: 1em; font-size: 22px; border-radius: 50%; vertical-align: middle;
+            position: relative; flex: none;
+            background: radial-gradient(circle at 32% 28%, #fff 0, #ffc2f0 20%, #d946ef 58%, #6d28d9 100%);
+            box-shadow: inset 0 0 0 .09em #ffffff66, 0 0 .5em #e879f9aa; }
+    .coin::after { content: '✦'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                   font-size: .62em; color: #fff; text-shadow: 0 0 4px #7c3aed; }
+    .coin.s { font-size: 14px; }
+    .coin.m { font-size: 28px; }
+
+    /* ---------- Umumiy elementlar (o'yin fayllari ham ishlatadi) ---------- */
+    .card { background: var(--card); border: 1px solid #ffffff1f; border-radius: 16px; padding: 14px; margin-bottom: 10px; }
     .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .mut { color: var(--mut); font-size: 13px; }
-    .btn { background: var(--acc); color: #fff; border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
+    .btn { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; border: 0; border-radius: 12px;
+           padding: 10px 15px; font-weight: 700; cursor: pointer; }
     .btn:disabled { opacity: .4; }
     h3 { margin: 6px 0 10px; }
-    nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); display: flex;
-          justify-content: space-around; align-items: flex-end; padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-          box-shadow: 0 -2px 10px #0006; z-index: 10; }
-    nav button { background: none; border: 0; color: var(--mut); font-size: 12px; flex: 1;
-                 display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    nav button.active { color: #fff; }
-    nav .ic { font-size: 22px; line-height: 1; }
-    nav button.center .ic { width: 58px; height: 58px; border-radius: 50%; background: var(--acc);
-                            display: flex; align-items: center; justify-content: center; font-size: 28px;
-                            margin-top: -28px; box-shadow: 0 6px 16px #7c5cff99; }
-    .overlay { position: fixed; inset: 0; background: #000d; display: flex; flex-direction: column;
-               align-items: center; justify-content: center; gap: 12px; z-index: 50; font-size: 18px; }
-    .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #2b3150;
-             padding: 10px 16px; border-radius: 12px; z-index: 60; max-width: 90%; text-align: center; }
-    .game-screen { position: fixed; inset: 0; background: var(--bg); z-index: 30; overflow: auto; padding: 14px; }
-    .err { background: #3a1f2b; border: 1px solid #a33; color: #ffb3b3; border-radius: 12px; padding: 12px;
-           margin: 12px 14px; font-size: 14px; }
-    .stars-box { background: #241f4d; border-radius: 12px; padding: 12px; margin-top: 12px; }
-    .bar { height: 8px; border-radius: 6px; background: #141830; overflow: hidden; margin-top: 8px; }
-    .bar b { display: block; height: 100%; background: var(--gold); width: 0; transition: width .4s; }
+    .game-screen { position: fixed; inset: 0; background: #12062e; z-index: 30; overflow: auto; padding: 14px; }
+    .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #2a1160ee; border: 1px solid #8b5cf6;
+             padding: 10px 16px; border-radius: 14px; z-index: 60; max-width: 90%; text-align: center; backdrop-filter: blur(6px); }
+    .err { position: fixed; top: 66px; left: 12px; right: 12px; z-index: 55; background: #4a1230f2; border: 1px solid #ff5c8a;
+           color: #ffd0dc; border-radius: 14px; padding: 12px; font-size: 14px; }
+
+    /* ---------- Bosh sahifa ---------- */
+    #app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;
+           padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+    #top { display: flex; align-items: center; gap: 10px; }
+    .av { width: 54px; height: 54px; border-radius: 50%; flex: none; overflow: hidden; border: 3px solid var(--cyan);
+          box-shadow: 0 0 14px #22d3ee88; background: linear-gradient(135deg, #8b5cf6, #ec4899);
+          display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
+    .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .who b { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+             text-shadow: 0 2px 6px #0008; }
+    .lvl { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-radius: 10px; padding: 2px 10px;
+           font-size: 13px; font-weight: 800; }
+    .cpill { display: flex; align-items: center; gap: 8px; background: #12062ecc; border: 2px solid #ffffff2a;
+             border-radius: 30px; padding: 5px 5px 5px 12px; box-shadow: 0 4px 14px #0007; }
+    .cpill b { font-size: 22px; font-weight: 800; min-width: 28px; text-align: center; }
+    .plus { width: 38px; height: 38px; border-radius: 50%; border: 0; color: #fff; font-size: 26px; font-weight: 800;
+            line-height: 1; background: linear-gradient(135deg, #22d3ee, #8b5cf6); box-shadow: 0 0 12px #22d3ee88; cursor: pointer; }
+    .online { align-self: center; margin-top: 12px; display: flex; align-items: center; gap: 8px; background: #12062eb3;
+              border-radius: 20px; padding: 6px 16px; font-weight: 700; font-size: 17px; border: 1px solid #ffffff1a; }
+    .online i { width: 12px; height: 12px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399;
+                animation: blink 1.6s ease-in-out infinite; }
+    @keyframes blink { 50% { opacity: .35; } }
+
+    #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .side { display: flex; flex-direction: column; gap: 16px; width: 74px; flex: none; }
+    .sb { background: none; border: 0; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px;
+          font-size: 12.5px; font-weight: 800; text-shadow: 0 2px 5px #000a; cursor: pointer; position: relative;
+          animation: bob 3.2s ease-in-out infinite; }
+    .side .sb:nth-child(2) { animation-delay: -1s; }
+    .side .sb:nth-child(3) { animation-delay: -2s; }
+    @keyframes bob { 50% { transform: translateY(-5px); } }
+    .sb .ic { width: 62px; height: 62px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
+              font-size: 31px; border: 2px solid var(--a); position: relative; overflow: hidden;
+              background: linear-gradient(150deg, #5b21b6, #1e0b4a); box-shadow: 0 0 14px var(--a), inset 0 0 14px #ffffff1a; }
+    .sb .ic::after { content: ''; position: absolute; top: -40%; left: -60%; width: 50%; height: 180%;
+                     background: linear-gradient(90deg, transparent, #ffffff55, transparent); transform: rotate(20deg);
+                     animation: shine 4s ease-in-out infinite; }
+    @keyframes shine { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+    .sb:active .ic { transform: scale(.92); }
+    .dot { position: absolute; top: -3px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ff3d6e;
+           border: 2px solid #fff; z-index: 2; animation: blink 1.2s infinite; }
+
+    #hero { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    .logo { text-align: center; line-height: 1; font-weight: 900; letter-spacing: 3px; font-size: 25px;
+            background: linear-gradient(180deg, #fff, #f0abfc 55%, #22d3ee); -webkit-background-clip: text; background-clip: text;
+            color: transparent; filter: drop-shadow(0 3px 0 #4c1d95) drop-shadow(0 0 12px #c026d3aa); }
+    .logo small { display: block; font-size: 15px; letter-spacing: 9px; margin-top: 4px; }
+    .planet { position: relative; width: 112px; height: 112px; border-radius: 50%; animation: floaty 5s ease-in-out infinite;
+              background: radial-gradient(circle at 30% 28%, #ffe4fa 0, #f472b6 28%, #a21caf 62%, #3b0764 100%);
+              box-shadow: 0 0 40px #c026d388, inset -14px -10px 26px #2e106555; }
+    .planet::before { content: ''; position: absolute; left: -34px; right: -34px; top: 40%; height: 28%; border-radius: 50%;
+                      border: 7px solid #67e8f9cc; border-bottom-color: #22d3ee55; transform: rotate(-18deg);
+                      box-shadow: 0 0 14px #22d3ee88; }
+    .planet i { position: absolute; border-radius: 50%; background: #0000002e; }
+    .planet i:nth-child(1) { width: 22px; height: 22px; left: 22px; top: 18px; }
+    .planet i:nth-child(2) { width: 14px; height: 14px; right: 24px; top: 56px; }
+    .planet i:nth-child(3) { width: 10px; height: 10px; left: 38px; bottom: 16px; }
+    @keyframes floaty { 50% { transform: translateY(-12px) rotate(4deg); } }
+
+    #dockwrap { background: #12062ea8; border: 1px solid #ffffff22; border-radius: 22px; padding: 8px 4px; backdrop-filter: blur(6px); }
+    #dock { display: flex; gap: 12px; overflow-x: auto; padding: 8px 12px; scroll-snap-type: x proximity;
+            scrollbar-width: none; -ms-overflow-style: none; }
+    #dock::-webkit-scrollbar { display: none; }
+    .gt { flex: none; width: 66px; height: 66px; border-radius: 18px; border: 2px solid #ffffff33; cursor: pointer; font-size: 34px;
+          background: linear-gradient(150deg, #6d28d9, #1e0b4a); scroll-snap-align: center; color: #fff;
+          transition: transform .2s, box-shadow .2s, border-color .2s; }
+    .gt.sel { transform: scale(1.14); border-color: #fff; box-shadow: 0 0 20px #e879f9; }
+    #gname { text-align: center; font-size: 21px; font-weight: 800; margin-top: 12px; text-shadow: 0 2px 6px #000a; min-height: 28px; }
+    #gmeta { text-align: center; font-size: 13px; color: var(--mut); margin: 2px 0 10px; min-height: 18px; }
+    #gerr { text-align: center; font-size: 11px; color: #ffb3c8; }
+    #play { display: block; width: 100%; max-width: 360px; height: 74px; margin: 0 auto; border: 0; border-radius: 40px; cursor: pointer;
+            position: relative; overflow: hidden; color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 6px;
+            font-style: italic; text-shadow: 0 3px 0 #831843, 0 0 14px #fff8;
+            background: linear-gradient(180deg, #ff7ac8 0%, #ec4899 45%, #8b5cf6 100%);
+            border-bottom: 5px solid #5b21b6; box-shadow: 0 0 24px #ec4899aa, inset 0 3px 0 #ffffff66;
+            animation: pulse 2s ease-in-out infinite; }
+    #play::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+                   background: linear-gradient(90deg, transparent, #ffffff88, transparent); transform: skewX(-20deg);
+                   animation: sweep 2.6s ease-in-out infinite; }
+    #play:disabled { opacity: .45; animation: none; }
+    #play:active { transform: translateY(3px) scale(.98); }
+    @keyframes pulse { 50% { transform: scale(1.03); box-shadow: 0 0 38px #ec4899; } }
+    @keyframes sweep { 0%, 55% { left: -60%; } 100% { left: 140%; } }
+
+    /* ---------- Pastdan chiqadigan oyna ---------- */
+    #sheetBg { position: fixed; inset: 0; z-index: 20; background: #0009; display: flex; align-items: flex-end;
+               justify-content: center; backdrop-filter: blur(3px); }
+    #sheet { width: 100%; max-width: 560px; max-height: 80dvh; display: flex; flex-direction: column;
+             background: linear-gradient(180deg, #2a1068, #14073a); border-radius: 26px 26px 0 0;
+             border-top: 2px solid #a78bfa; box-shadow: 0 -8px 30px #8b5cf666; animation: up .28s ease-out; }
+    @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
+    #sheetHead { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 8px; font-size: 20px; font-weight: 800; }
+    #sheetX { width: 36px; height: 36px; border-radius: 50%; border: 0; background: #ffffff22; color: #fff; font-size: 18px; cursor: pointer; }
+    #sheetBody { padding: 8px 16px calc(20px + env(safe-area-inset-bottom)); overflow-y: auto; }
+    .soon { text-align: center; padding: 26px 10px; }
+    .soon .big { font-size: 60px; animation: floaty 3s ease-in-out infinite; display: inline-block; }
+    .bar { height: 10px; border-radius: 6px; background: #0006; overflow: hidden; margin-top: 10px; }
+    .bar b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #22d3ee, #ec4899); transition: width .5s; }
+
+    /* ---------- Reklama oynasi ---------- */
+    #adbox { position: fixed; inset: 0; z-index: 50; background: #0b0220ee; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; gap: 16px; font-size: 18px; }
+    .ring { width: 96px; height: 96px; border-radius: 50%; border: 6px solid #ffffff22; border-top-color: var(--pink);
+            border-right-color: var(--cyan); animation: rot 1s linear infinite; display: flex; align-items: center;
+            justify-content: center; }
+    .ring span { font-size: 38px; font-weight: 800; animation: rotback 1s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+    @keyframes rotback { to { transform: rotate(-360deg); } }
+
+    /* ---------- Ochilish ekrani ---------- */
+    #splash { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center;
+              justify-content: center; gap: 30px; background: radial-gradient(circle at 50% 38%, #4c1d95cc, #12062ef2 70%);
+              transition: opacity .7s ease, transform .7s ease; }
+    #splash.out { opacity: 0; transform: scale(1.12); pointer-events: none; }
+    .sc { position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
+    .sc .coin { font-size: 130px; animation: spinY 2.4s linear infinite; filter: drop-shadow(0 0 26px #e879f9); }
+    .sc::before, .sc::after { content: ''; position: absolute; border-radius: 50%; border: 2px solid #e879f9aa;
+                              inset: -10px; animation: ripple 2.4s ease-out infinite; }
+    .sc::after { animation-delay: 1.2s; }
+    @keyframes spinY { to { transform: rotateY(360deg); } }
+    @keyframes ripple { from { transform: scale(.8); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }
+    #splash .logo { font-size: 36px; letter-spacing: 5px; animation: rise .9s ease-out both; }
+    #splash .logo small { font-size: 20px; letter-spacing: 13px; }
+    @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .pbar { width: 62%; max-width: 280px; height: 12px; border-radius: 8px; background: #ffffff1f; overflow: hidden;
+            border: 1px solid #ffffff2a; }
+    .pbar b { display: block; height: 100%; width: 8%; border-radius: 8px; transition: width .5s ease-out;
+              background: linear-gradient(90deg, #22d3ee, #8b5cf6, #ec4899, #22d3ee); background-size: 200% 100%;
+              animation: flow 1.2s linear infinite; }
+    @keyframes flow { to { background-position: -200% 0; } }
+    #tip { color: var(--mut); font-size: 14px; margin-top: -12px; height: 18px; letter-spacing: .5px; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div>
-      <b id="uname">Yuklanmoqda…</b>
-      <div class="mut" id="urank"></div>
+  <canvas id="bg"></canvas>
+
+  <div id="app">
+    <div id="top">
+      <div class="av" id="av">?</div>
+      <div class="who">
+        <b id="uname">Yuklanmoqda…</b>
+        <span class="lvl" id="ulvl">Lvl 1</span>
+      </div>
+      <div class="cpill">
+        <i class="coin m"></i><b id="ucoins">0</b>
+        <button class="plus" onclick="openSheet('tasks')">+</button>
+      </div>
     </div>
-    <div class="coins">🪙 <span id="ucoins">0</span></div>
-  </header>
+
+    <div class="online"><i></i><span id="uonline">— online</span></div>
+
+    <div id="stage">
+      <div class="side">
+        <button class="sb" style="--a:#22d3ee" onclick="openSheet('tasks')"><span class="ic">📋<span class="dot" id="bTasks" hidden></span></span>Vazifalar</button>
+        <button class="sb" style="--a:#fbbf24" onclick="openSheet('top')"><span class="ic">🏆</span>Reyting</button>
+        <button class="sb" style="--a:#f472b6" onclick="openSheet('shop')"><span class="ic">🛍️</span>Do‘kon</button>
+      </div>
+
+      <div id="hero">
+        <div class="logo">GALAXY<small>ARENA</small></div>
+        <div class="planet"><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="side">
+        <button class="sb" style="--a:#a78bfa" onclick="openSheet('friends')"><span class="ic">👥</span>Do‘st bilan</button>
+        <button class="sb" style="--a:#34d399" onclick="openSheet('pay')"><span class="ic">💸</span>Pul yechish<span class="dot" id="bPay" hidden style="top:-3px;right:4px"></span></button>
+        <button class="sb" style="--a:#fb923c" onclick="openSheet('profile')"><span class="ic">🚀</span>Profil</button>
+      </div>
+    </div>
+
+    <div id="dockwrap"><div id="dock"></div></div>
+    <div id="gname">…</div>
+    <div id="gmeta"></div>
+    <button id="play" disabled>PLAY</button>
+    <div id="gerr"></div>
+  </div>
 
   <div class="err" id="errbox" hidden>
     <div id="errtext"></div>
     <button class="btn" style="margin-top:10px" onclick="retryLoad()">🔄 Qayta urinish</button>
   </div>
 
-  <!-- VAZIFALAR -->
-  <section class="page" id="p-tasks">
-    <h3>✅ Vazifalar</h3>
-    <div id="tasks"><div class="card mut">Yuklanmoqda…</div></div>
-  </section>
-
-  <!-- O'YINLAR (markaz) -->
-  <section class="page active" id="p-games">
-    <h3>🎮 O‘yinlar</h3>
-    <div id="games"><div class="card mut">Yuklanmoqda…</div></div>
-  </section>
-
-  <!-- PROFIL + REYTING -->
-  <section class="page" id="p-profile">
-    <div class="card">
-      <div class="row">
-        <div><b id="pname"></b><div class="mut" id="pun"></div></div>
-        <div class="coins">🪙 <span id="pcoins"></span></div>
-      </div>
-      <div class="mut" style="margin-top:8px">O‘rin: <b id="prank"></b> · G‘alabalar: <b id="pwins"></b></div>
-
-      <div class="stars-box">
-        <div class="row">
-          <div>⭐ Stars: <b id="pstars">0</b></div>
-          <div class="mut">📺 Reklama: <b id="pads">0</b></div>
-        </div>
-        <div class="bar"><b id="pbar"></b></div>
-        <div class="mut" id="pstarsinfo" style="margin-top:6px"></div>
-        <button class="btn" id="wbtn" style="margin-top:10px;width:100%" onclick="withdraw()" disabled>💸 Yechib olish</button>
-      </div>
+  <div id="sheetBg" hidden>
+    <div id="sheet">
+      <div id="sheetHead"><span id="sheetTitle"></span><button id="sheetX">✕</button></div>
+      <div id="sheetBody"></div>
     </div>
-    <h3>🏆 Reyting</h3>
-    <div class="card" id="lb"></div>
-  </section>
+  </div>
 
-  <nav>
-    <button data-page="tasks" onclick="showPage('tasks')"><span class="ic">✅</span>Vazifalar</button>
-    <button data-page="games" class="center" onclick="showPage('games')"><span class="ic">🎮</span>O‘yinlar</button>
-    <button data-page="profile" onclick="showPage('profile')"><span class="ic">👤</span>Profil</button>
-  </nav>
-
-  <div class="overlay" id="adbox" hidden>
-    <div>📺 Reklama yuklanmoqda…</div>
-    <div style="font-size:40px" id="adsec">5</div>
+  <div id="adbox" hidden>
+    <div class="ring"><span id="adsec">5</span></div>
+    <div>📺 Reklama ko‘rilmoqda…</div>
   </div>
 
   <div class="toast" id="toast" hidden></div>
 
   <!-- O'yin ekranlari shu yerga avtomatik qo'shiladi -->
   <div id="gameScreens"></div>
+
+  <!-- Ochilish ekrani -->
+  <div id="splash">
+    <div class="sc"><i class="coin"></i></div>
+    <div class="logo">GALAXY<small>ARENA</small></div>
+    <div class="pbar"><b id="sfill"></b></div>
+    <div id="tip">Kosmosga tayyorlanmoqda…</div>
+  </div>
 
 <script>
   // ============================================================
@@ -119,15 +258,14 @@
   var API_URL = 'https://script.google.com/macros/s/AKfycbx1lmkyETJ1YYCpU3cAylORiptKxfcCIIH6m2bzmVFOuBIw4ADoZ2iCPPA2PdTQF7dd_Q/exec';
 
   // ============================================================
-  // 2) O'YINLAR RO'YXATI
-  // GitHub'dagi o'yin fayllarining nomini shu yerga yozing.
+  // 2) O'YINLAR RO'YXATI (GitHub'dagi fayl nomlari)
   // ============================================================
   var GAME_FILES = ['B1.html', 'B2.html', 'B3.html'];
 
   var $ = function (id) { return document.getElementById(id); };
+  var COIN = '<i class="coin s"></i>';
 
   window.onerror = function (msg) {
-    // Telegram/boshqa saytdan keladigan umumiy "Script error." ni e'tiborsiz qoldiramiz
     if (!msg || String(msg).indexOf('Script error') === 0) return;
     try { showError('Xato: ' + msg); } catch (e) {}
   };
@@ -142,9 +280,26 @@
   }
   function hideError() { $('errbox').hidden = true; }
 
-  // ---------- Telegram ma'lumoti ----------
+  // ---------- Telegram ----------
   var TG = window.Telegram && window.Telegram.WebApp;
-  if (TG) { try { TG.ready(); TG.expand(); } catch (e) {} }
+  if (TG) {
+    try { TG.ready(); TG.expand(); } catch (e) {}
+    try { TG.setHeaderColor('#1a0840'); TG.setBackgroundColor('#12062e'); } catch (e) {}
+    try { TG.setBottomBarColor('#12062e'); } catch (e) {}
+  }
+
+  function applyInsets() {
+    var top = 12;
+    try {
+      if (TG && TG.isFullscreen) {
+        var a = (TG.safeAreaInset && TG.safeAreaInset.top) || 0;
+        var b = (TG.contentSafeAreaInset && TG.contentSafeAreaInset.top) || 0;
+        top += (a + b) || 72;
+      }
+    } catch (e) {}
+    $('app').style.paddingTop = top + 'px';
+  }
+  applyInsets();
 
   function initDataFromHash() {
     try {
@@ -203,11 +358,126 @@
   window.toast = toast;
 
   // ============================================================
+  // ORQA FON: yulduzli kosmos (animatsiya)
+  // ============================================================
+  var bg = $('bg'), bctx = bg.getContext('2d');
+  var layer = document.createElement('canvas');
+  var BW = 0, BH = 0, stars = [], shoot = null, bgOn = true, bgRaf = 0, nextShoot = 0;
+
+  function paintLayer() {
+    var c = layer.getContext('2d');
+    var g = c.createLinearGradient(0, 0, 0, BH);
+    g.addColorStop(0, '#0a0220');
+    g.addColorStop(0.45, '#2a0a5e');
+    g.addColorStop(0.8, '#6b1b8f');
+    g.addColorStop(1, '#b8247f');
+    c.fillStyle = g; c.fillRect(0, 0, BW, BH);
+
+    function blob(x, y, r, col) {
+      var rg = c.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = rg; c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    blob(BW * 0.15, BH * 0.22, BW * 0.7, 'rgba(236,72,153,.28)');
+    blob(BW * 0.9, BH * 0.45, BW * 0.75, 'rgba(34,211,238,.22)');
+    blob(BW * 0.4, BH * 0.7, BW * 0.8, 'rgba(139,92,246,.30)');
+
+    // Pastdagi katta sayyora yoyi
+    var R = BW * 1.3, cx = BW * 0.5, cy = BH + R * 0.80;
+    var pg = c.createRadialGradient(cx, cy - R * 0.2, R * 0.6, cx, cy, R);
+    pg.addColorStop(0, '#2b0a55'); pg.addColorStop(0.93, '#4a1380'); pg.addColorStop(1, '#f0abfc');
+    c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fillStyle = pg; c.fill();
+
+    // Oy
+    c.beginPath(); c.arc(BW * 0.12, BH * 0.1, 22, 0, Math.PI * 2);
+    var mg = c.createRadialGradient(BW * 0.12 - 6, BH * 0.1 - 6, 2, BW * 0.12, BH * 0.1, 22);
+    mg.addColorStop(0, '#fff'); mg.addColorStop(1, '#c4b5fd');
+    c.fillStyle = mg; c.fill();
+  }
+
+  function bgResize() {
+    BW = bg.width = layer.width = window.innerWidth;
+    BH = bg.height = layer.height = window.innerHeight;
+    paintLayer();
+    stars = [];
+    for (var i = 0; i < 90; i++) {
+      stars.push({ x: Math.random() * BW, y: Math.random() * BH * 0.85, r: 0.4 + Math.random() * 1.5,
+                   ph: Math.random() * 6.28, sp: 0.8 + Math.random() * 2.2 });
+    }
+  }
+
+  function bgFrame(t) {
+    if (!bgOn) return;
+    bgRaf = requestAnimationFrame(bgFrame);
+    bctx.drawImage(layer, 0, 0);
+    var s = t / 1000;
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      bctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(s * st.sp + st.ph));
+      bctx.fillStyle = '#fff';
+      bctx.beginPath(); bctx.arc(st.x, st.y, st.r, 0, 6.283); bctx.fill();
+    }
+    bctx.globalAlpha = 1;
+    if (!shoot && s > nextShoot) {
+      shoot = { x: Math.random() * BW * 0.8 + BW * 0.2, y: Math.random() * BH * 0.3, life: 0 };
+    }
+    if (shoot) {
+      shoot.life += 0.03;
+      var x = shoot.x - shoot.life * 220, y = shoot.y + shoot.life * 120;
+      var lg = bctx.createLinearGradient(x, y, x + 70, y - 38);
+      lg.addColorStop(0, 'rgba(255,255,255,' + (1 - shoot.life) + ')');
+      lg.addColorStop(1, 'rgba(255,255,255,0)');
+      bctx.strokeStyle = lg; bctx.lineWidth = 2;
+      bctx.beginPath(); bctx.moveTo(x, y); bctx.lineTo(x + 70, y - 38); bctx.stroke();
+      if (shoot.life >= 1) { shoot = null; nextShoot = s + 4 + Math.random() * 5; }
+    }
+  }
+
+  function bgStart() { if (bgOn && bgRaf) return; bgOn = true; bgRaf = requestAnimationFrame(bgFrame); }
+  function bgStop() { bgOn = false; cancelAnimationFrame(bgRaf); bgRaf = 0; }
+
+  window.addEventListener('resize', function () { bgResize(); applyInsets(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) bgStop(); else if (!anyGameOpen()) bgStart(); });
+  bgResize();
+  bgStart();
+
+  function anyGameOpen() {
+    var els = document.querySelectorAll('.game-screen');
+    for (var i = 0; i < els.length; i++) if (!els[i].hidden) return true;
+    return false;
+  }
+
+  // ============================================================
+  // OCHILISH EKRANI
+  // ============================================================
+  var splashStart = Date.now(), gamesDone = false, dataDone = false, splashGone = false;
+  var tips = ['Kosmosga tayyorlanmoqda…', 'O‘yinlar yuklanmoqda…', 'Nova tangalar sanalmoqda…', 'Raqiblar qidirilmoqda…'];
+  var tipI = 0;
+  var tipTimer = setInterval(function () { tipI = (tipI + 1) % tips.length; $('tip').textContent = tips[tipI]; }, 900);
+
+  function setProg(p) { $('sfill').style.width = p + '%'; }
+  setTimeout(function () { setProg(35); }, 80);
+
+  function tryHideSplash() {
+    if (splashGone || !(gamesDone && dataDone)) return;
+    splashGone = true;
+    setProg(100);
+    var wait = Math.max(500, 2200 - (Date.now() - splashStart));
+    setTimeout(function () {
+      $('splash').classList.add('out');
+      clearInterval(tipTimer);
+      setTimeout(function () { $('splash').hidden = true; }, 750);
+    }, wait);
+  }
+  setTimeout(function () { gamesDone = true; dataDone = true; tryHideSplash(); }, 15000);   // xavfsizlik
+
+  // ============================================================
   // O'YIN FAYLLARINI GITHUB'DAN O'QISH
   // ============================================================
   var GAMES = {};        // id -> {id, name, icon, desc, cost, prize, file}
   var GAME_ORDER = [];   // id lar tartibi
   var GAME_ERRORS = [];  // o'qilmagan fayllar
+  var selId = null;
 
   function loadGameFile(file) {
     return fetch(file + '?v=' + Date.now())
@@ -259,38 +529,63 @@
   }
 
   function loadAllGames() {
-    return Promise.all(GAME_FILES.map(loadGameFile)).then(renderGames);
+    return Promise.all(GAME_FILES.map(loadGameFile)).then(function () {
+      renderGames();
+      setProg(70);
+      gamesDone = true;
+      tryHideSplash();
+    });
+  }
+
+  function gameNums(id) {
+    var g = GAMES[id], cost = g.cost, prize = g.prize;
+    // Server (Games jadvali) narxni o'zgartirgan bo'lsa, shuni ko'rsatadi
+    if (DATA && DATA.games) {
+      var sg = DATA.games.filter(function (x) { return x.id === id; })[0];
+      if (sg) { cost = sg.cost; prize = sg.prize; }
+    }
+    return { cost: cost, prize: prize };
   }
 
   function renderGames() {
-    var html = GAME_ORDER.map(function (id) {
-      var g = GAMES[id];
-      var cost = g.cost, prize = g.prize;
-      // Server (Games jadvali) narxni o'zgartirgan bo'lsa, shuni ko'rsatadi
-      if (DATA && DATA.games) {
-        var sg = DATA.games.filter(function (x) { return x.id === id; })[0];
-        if (sg) { cost = sg.cost; prize = sg.prize; }
-      }
-      return '<div class="card row" style="cursor:pointer" onclick="openGame(\'' + esc(id) + '\')">' +
-        '<div style="font-size:34px">' + esc(g.icon) + '</div>' +
-        '<div style="flex:1"><b>' + esc(g.name) + '</b>' +
-        '<div class="mut">' + esc(g.desc) + '</div>' +
-        '<div class="mut">🎟 ' + cost + ' 🪙 · 🏆 ' + prize + ' 🪙</div></div>' +
-        '<span style="font-size:20px">▶</span></div>';
+    if (!selId || !GAMES[selId]) selId = GAME_ORDER[0] || null;
+
+    $('dock').innerHTML = GAME_ORDER.map(function (id) {
+      return '<button class="gt' + (id === selId ? ' sel' : '') + '" data-id="' + esc(id) + '">' + esc(GAMES[id].icon) + '</button>';
     }).join('');
 
-    GAME_ERRORS.forEach(function (m) {
-      html += '<div class="card" style="color:#ffb3b3">⚠️ ' + esc(m) + '</div>';
-    });
-
-    $('games').innerHTML = html || '<div class="card mut">O‘yinlar yo‘q</div>';
+    if (selId) {
+      var g = GAMES[selId], n = gameNums(selId);
+      $('gname').textContent = g.name;
+      $('gmeta').innerHTML = '🎟 ' + n.cost + ' ' + COIN + ' &nbsp;·&nbsp; 🏆 ' + n.prize + ' ' + COIN;
+      $('play').disabled = false;
+    } else {
+      $('gname').textContent = 'O‘yinlar yo‘q';
+      $('gmeta').textContent = '';
+      $('play').disabled = true;
+    }
+    $('gerr').textContent = GAME_ERRORS.length ? '⚠️ ' + GAME_ERRORS[0] : '';
   }
+
+  $('dock').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.gt') : null;
+    if (!b) return;
+    selId = b.getAttribute('data-id');
+    renderGames();
+    var cur = $('dock').querySelector('.gt.sel');
+    if (cur && cur.scrollIntoView) { try { cur.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (x) {} }
+    try { TG.HapticFeedback.selectionChanged(); } catch (x) {}
+  });
+
+  $('play').onclick = function () { if (selId) openGame(selId); };
 
   function openGame(id) {
     var el = $('screen-' + id);
     if (!el) { toast('O‘yin topilmadi'); return; }
     if (!APP.initData) { toast('Iltimos, botni Telegram ichidan oching'); return; }
+    closeSheet();
     el.hidden = false;
+    bgStop();                         // o'yin vaqtida fon animatsiyasi to'xtaydi (batareya tejaladi)
     var api = window['game_' + id];
     if (api && api.open) api.open();
   }
@@ -300,6 +595,7 @@
     if (el) el.hidden = true;
     var api = window['game_' + id];
     if (api && api.close) api.close();
+    if (!anyGameOpen()) bgStart();
     refresh();
   }
   window.openGame = openGame;
@@ -329,40 +625,104 @@
   }
   window.retryLoad = retryLoad;
 
+  function levelOf(m) { return 1 + Math.floor((m.wins || 0) / 3); }
+
+  function setAvatar(name) {
+    var url = '';
+    try { url = TG.initDataUnsafe.user.photo_url || ''; } catch (e) {}
+    var av = $('av');
+    if (url) {
+      av.innerHTML = '<img src="' + esc(url) + '" alt="">';
+      var im = av.firstChild;
+      im.onerror = function () { av.textContent = (name || '?').replace('@', '').charAt(0).toUpperCase(); };
+    } else {
+      av.textContent = (name || '?').replace('@', '').charAt(0).toUpperCase();
+    }
+  }
+
   function render() {
     if (!DATA) return;
     var d = DATA, m = d.me;
     $('uname').textContent = m.name;
-    $('urank').textContent = '🏆 Reyting: #' + m.rank;
+    $('ulvl').textContent = 'Lvl ' + levelOf(m);
     $('ucoins').textContent = m.coins;
-    $('pname').textContent = m.name;
-    $('pun').textContent = m.username ? '@' + m.username : '';
-    $('pcoins').textContent = m.coins;
-    $('prank').textContent = '#' + m.rank;
-    $('pwins').textContent = m.wins;
+    $('uonline').textContent = (d.online || 1) + ' online';
+    setAvatar(m.name);
 
-    // Stars bo'limi
-    $('pstars').textContent = m.stars;
-    $('pads').textContent = m.ads;
-    $('pstarsinfo').textContent = m.adsPerStar + ' ta reklama = 1 ⭐ · minimum ' + m.minWithdraw + ' ⭐ (' +
-      m.stars + '/' + m.minWithdraw + ')';
-    $('pbar').style.width = Math.min(100, m.stars / m.minWithdraw * 100) + '%';
-    $('wbtn').disabled = m.stars < m.minWithdraw;
-
-    $('tasks').innerHTML = d.tasks.map(function (t) {
-      var full = t.done >= t.limit;
-      return '<div class="card row">' +
-        '<div><b>' + esc(t.title) + '</b><div class="mut">+' + t.reward + ' 🪙 · bugun ' + t.done + '/' + t.limit + '</div></div>' +
-        '<button class="btn" ' + (full ? 'disabled' : '') + ' onclick="watchAd(\'' + esc(t.id) + '\')">' + (full ? 'Tugadi' : 'Ko‘rish') + '</button>' +
-        '</div>';
-    }).join('') || '<div class="card mut">Hozircha vazifa yo‘q</div>';
-
-    $('lb').innerHTML = d.leaderboard.map(function (u, i) {
-      return '<div class="row" style="padding:7px 4px;' + (u.me ? 'color:var(--gold);font-weight:700' : '') + '">' +
-        '<span>' + (i + 1) + '. ' + esc(u.name) + '</span><span>🪙 ' + u.coins + '</span></div>';
-    }).join('');
+    $('bTasks').hidden = !d.tasks.some(function (t) { return t.done < t.limit; });
+    $('bPay').hidden = !(m.stars >= m.minWithdraw);
 
     renderGames();
+    if (sheetKind) buildSheet();
+  }
+
+  // ---------- Pastdan chiqadigan oynalar ----------
+  var sheetKind = null;
+  var TITLES = { tasks: '📋 Vazifalar', top: '🏆 Reyting', shop: '🛍️ Do‘kon', friends: '👥 Do‘st bilan',
+                 pay: '💸 Pul yechish', profile: '🚀 Profil' };
+
+  function openSheet(k) {
+    if (!APP.initData && k !== 'shop' && k !== 'friends') { toast('Botni Telegram ichidan oching'); return; }
+    sheetKind = k;
+    $('sheetBg').hidden = false;
+    buildSheet();
+  }
+  function closeSheet() { sheetKind = null; $('sheetBg').hidden = true; }
+  window.openSheet = openSheet;
+  window.closeSheet = closeSheet;
+  $('sheetX').onclick = closeSheet;
+  $('sheetBg').addEventListener('click', function (e) { if (e.target === $('sheetBg')) closeSheet(); });
+
+  function soon(icon, text) {
+    return '<div class="soon"><div class="big">' + icon + '</div><h3>Tez kunda!</h3><div class="mut">' + text + '</div></div>';
+  }
+
+  function buildSheet() {
+    var k = sheetKind;
+    $('sheetTitle').textContent = TITLES[k] || '';
+    var body = $('sheetBody'), h = '';
+
+    if (k === 'shop') { body.innerHTML = soon('🛍️', 'Do‘konda Nova tangalar evaziga yangi sovg‘alar va bezaklar bo‘ladi.'); return; }
+    if (k === 'friends') { body.innerHTML = soon('👥', 'Do‘stingiz bilan alohida xonada o‘ynash imkoniyati qo‘shiladi.'); return; }
+    if (!DATA) { body.innerHTML = '<div class="card mut">Yuklanmoqda…</div>'; return; }
+    var d = DATA, m = d.me;
+
+    if (k === 'tasks') {
+      h = d.tasks.map(function (t) {
+        var full = t.done >= t.limit;
+        return '<div class="card row">' +
+          '<div><b>' + esc(t.title) + '</b><div class="mut">+' + t.reward + ' ' + COIN + ' · bugun ' + t.done + '/' + t.limit + '</div></div>' +
+          '<button class="btn" ' + (full ? 'disabled' : '') + ' onclick="watchAd(\'' + esc(t.id) + '\')">' + (full ? 'Tugadi' : 'Ko‘rish') + '</button>' +
+          '</div>';
+      }).join('') || '<div class="card mut">Hozircha vazifa yo‘q</div>';
+    } else if (k === 'top') {
+      h = '<div class="card">' + d.leaderboard.map(function (u, i) {
+        var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+        return '<div class="row" style="padding:8px 2px;' + (u.me ? 'color:#ffd54a;font-weight:800' : '') + '">' +
+          '<span>' + medal + ' ' + esc(u.name) + '</span><span>' + u.coins + ' ' + COIN + '</span></div>';
+      }).join('') + '</div>';
+    } else if (k === 'pay') {
+      var pct = Math.min(100, m.stars / m.minWithdraw * 100);
+      h = '<div class="card">' +
+        '<div class="row"><div style="font-size:15px">⭐ Stars</div><b style="font-size:28px">' + m.stars + '</b></div>' +
+        '<div class="bar"><b style="width:' + pct + '%"></b></div>' +
+        '<div class="mut" style="margin-top:8px">' + m.adsPerStar + ' ta reklama = 1 ⭐ · minimum ' + m.minWithdraw + ' ⭐ (' + m.stars + '/' + m.minWithdraw + ')</div>' +
+        '<div class="mut" style="margin-top:4px">📺 Ko‘rilgan reklama: ' + m.ads + '</div>' +
+        '<button class="btn" style="margin-top:12px;width:100%" ' + (m.stars < m.minWithdraw ? 'disabled' : '') +
+        ' onclick="withdraw()">💸 Yechib olish</button></div>' +
+        '<div class="mut" style="text-align:center">So‘rov yuborilgach, to‘lov qo‘lda amalga oshiriladi.</div>';
+    } else if (k === 'profile') {
+      h = '<div class="card"><div class="row"><div><b style="font-size:18px">' + esc(m.name) + '</b>' +
+        '<div class="mut">' + (m.username ? '@' + esc(m.username) : '') + '</div></div>' +
+        '<span class="lvl">Lvl ' + levelOf(m) + '</span></div></div>' +
+        '<div class="card">' +
+        '<div class="row" style="padding:6px 0"><span>Nova tangalar</span><b>' + m.coins + ' ' + COIN + '</b></div>' +
+        '<div class="row" style="padding:6px 0"><span>Reyting o‘rni</span><b>#' + m.rank + '</b></div>' +
+        '<div class="row" style="padding:6px 0"><span>G‘alabalar</span><b>' + m.wins + '</b></div>' +
+        '<div class="row" style="padding:6px 0"><span>Keyingi darajaga</span><b>' + (3 - (m.wins % 3)) + ' ta g‘alaba</b></div>' +
+        '</div>';
+    }
+    body.innerHTML = h;
   }
 
   // ---------- Reklama (vazifa) ----------
@@ -389,15 +749,14 @@
 
   function claim(taskId) {
     gcall('claimTask', APP.initData, taskId).then(function (r) {
-      toast('+' + r.reward + ' 🪙 qo‘shildi!');
+      toast('+' + r.reward + ' Nova qo‘shildi!');
+      try { TG.HapticFeedback.notificationOccurred('success'); } catch (e) {}
       refresh();
     }).catch(function (e) { toast('⚠️ ' + e.message); });
   }
 
   // ---------- Stars yechib olish ----------
   function withdraw() {
-    var b = $('wbtn');
-    b.disabled = true;
     gcall('requestWithdraw', APP.initData).then(function (r) {
       toast('✅ ' + r.stars + ' ⭐ so‘rovi yuborildi. Tez orada to‘lanadi');
       refresh();
@@ -408,21 +767,14 @@
   }
   window.withdraw = withdraw;
 
-  // ---------- Sahifalar ----------
-  function showPage(p) {
-    document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('active', x.id === 'p-' + p); });
-    document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-page') === p); });
-  }
-  window.showPage = showPage;
-
   // ---------- Ishga tushirish ----------
-  showPage('games');
-  loadAllGames();                 // o'yin fayllari GitHub'dan o'qiladi (serverga bog'liq emas)
+  loadAllGames();                     // o'yin fayllari GitHub'dan o'qiladi (serverga bog'liq emas)
   if (!APP.initData) {
     $('uname').textContent = 'Telegram aniqlanmadi';
-    $('tasks').innerHTML = '<div class="card mut">Botni Telegram ichidan oching</div>';
+    dataDone = true;
+    tryHideSplash();
   } else {
-    refresh();                    // foydalanuvchi, tanga, reyting serverdan olinadi
+    refresh().then(function () { setProg(90); dataDone = true; tryHideSplash(); });
   }
 </script>
 </body>
