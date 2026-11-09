@@ -41,6 +41,9 @@
     .game-screen { position: fixed; inset: 0; background: var(--bg); z-index: 30; overflow: auto; padding: 14px; }
     .err { background: #3a1f2b; border: 1px solid #a33; color: #ffb3b3; border-radius: 12px; padding: 12px;
            margin: 12px 14px; font-size: 14px; }
+    .stars-box { background: #241f4d; border-radius: 12px; padding: 12px; margin-top: 12px; }
+    .bar { height: 8px; border-radius: 6px; background: #141830; overflow: hidden; margin-top: 8px; }
+    .bar b { display: block; height: 100%; background: var(--gold); width: 0; transition: width .4s; }
   </style>
 </head>
 <body>
@@ -78,6 +81,16 @@
         <div class="coins">🪙 <span id="pcoins"></span></div>
       </div>
       <div class="mut" style="margin-top:8px">O‘rin: <b id="prank"></b> · G‘alabalar: <b id="pwins"></b></div>
+
+      <div class="stars-box">
+        <div class="row">
+          <div>⭐ Stars: <b id="pstars">0</b></div>
+          <div class="mut">📺 Reklama: <b id="pads">0</b></div>
+        </div>
+        <div class="bar"><b id="pbar"></b></div>
+        <div class="mut" id="pstarsinfo" style="margin-top:6px"></div>
+        <button class="btn" id="wbtn" style="margin-top:10px;width:100%" onclick="withdraw()" disabled>💸 Yechib olish</button>
+      </div>
     </div>
     <h3>🏆 Reyting</h3>
     <div class="card" id="lb"></div>
@@ -108,14 +121,14 @@
   // ============================================================
   // 2) O'YINLAR RO'YXATI
   // GitHub'dagi o'yin fayllarining nomini shu yerga yozing.
-  // Yangi o'yin qo'shish uchun: faylni GitHub'ga yuklang va nomini shu ro'yxatga yozing.
-  // Masalan:  var GAME_FILES = ['B1.html', 'B2.html', 'B3.html'];
   // ============================================================
-  var GAME_FILES = ['B1.html', 'B2.html','B3.html'];
+  var GAME_FILES = ['B1.html', 'B2.html', 'B3.html'];
 
   var $ = function (id) { return document.getElementById(id); };
 
   window.onerror = function (msg) {
+    // Telegram/boshqa saytdan keladigan umumiy "Script error." ni e'tiborsiz qoldiramiz
+    if (!msg || String(msg).indexOf('Script error') === 0) return;
     try { showError('Xato: ' + msg); } catch (e) {}
   };
   window.onunhandledrejection = function (ev) {
@@ -123,7 +136,7 @@
   };
 
   function showError(text) {
-    $('uname').textContent = 'Xato';
+    if (!DATA) $('uname').textContent = 'Xato';
     $('errtext').textContent = '⚠️ ' + text;
     $('errbox').hidden = false;
   }
@@ -191,8 +204,6 @@
 
   // ============================================================
   // O'YIN FAYLLARINI GITHUB'DAN O'QISH
-  // Har bir fayl (masalan B1.html) o'qiladi, ichidagi o'yin ma'lumoti (game-info)
-  // olinadi, o'yin oynasi yaratiladi va bosh sahifada karta chiqadi.
   // ============================================================
   var GAMES = {};        // id -> {id, name, icon, desc, cost, prize, file}
   var GAME_ORDER = [];   // id lar tartibi
@@ -330,6 +341,14 @@
     $('prank').textContent = '#' + m.rank;
     $('pwins').textContent = m.wins;
 
+    // Stars bo'limi
+    $('pstars').textContent = m.stars;
+    $('pads').textContent = m.ads;
+    $('pstarsinfo').textContent = m.adsPerStar + ' ta reklama = 1 ⭐ · minimum ' + m.minWithdraw + ' ⭐ (' +
+      m.stars + '/' + m.minWithdraw + ')';
+    $('pbar').style.width = Math.min(100, m.stars / m.minWithdraw * 100) + '%';
+    $('wbtn').disabled = m.stars < m.minWithdraw;
+
     $('tasks').innerHTML = d.tasks.map(function (t) {
       var full = t.done >= t.limit;
       return '<div class="card row">' +
@@ -347,7 +366,9 @@
   }
 
   // ---------- Reklama (vazifa) ----------
-  // Haqiqiy reklama tarmog'i SDK sini shu yerga ulang
+  // DIQQAT: hozir bu soxta reklama (5 soniya kutadi).
+  // Haqiqiy reklama tarmog'i (Adsgram, Monetag) SDK sini shu yerga ulang va
+  // faqat reklama TO'LIQ ko'rilgandan keyin claim(taskId) ni chaqiring.
   var adTimer = null;
   function watchAd(taskId) {
     $('adbox').hidden = false;
@@ -372,6 +393,20 @@
       refresh();
     }).catch(function (e) { toast('⚠️ ' + e.message); });
   }
+
+  // ---------- Stars yechib olish ----------
+  function withdraw() {
+    var b = $('wbtn');
+    b.disabled = true;
+    gcall('requestWithdraw', APP.initData).then(function (r) {
+      toast('✅ ' + r.stars + ' ⭐ so‘rovi yuborildi. Tez orada to‘lanadi');
+      refresh();
+    }).catch(function (e) {
+      toast('⚠️ ' + e.message);
+      refresh();
+    });
+  }
+  window.withdraw = withdraw;
 
   // ---------- Sahifalar ----------
   function showPage(p) {
