@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Worm Escape</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#a9df91;
+ font-family:Arial,sans-serif;
+ overflow:hidden;touch-action:manipulation;
+}
+#app{
+ width:100%;height:100dvh;
+ display:flex;flex-direction:column;
+ padding:8px;gap:7px;
+ max-width:600px;margin:auto;
+}
+header{
+ height:48px;display:flex;
+ justify-content:space-between;
+ align-items:center;color:#245b39;
+ font-size:19px;font-weight:bold;
+}
+button{
+ border:0;border-radius:14px;
+ padding:10px 15px;font-weight:bold;
+ background:#efffe5;color:#27663b;
+}
+#stats{
+ display:flex;justify-content:space-between;
+ align-items:center;height:35px;
+ font-weight:bold;color:#28613c;
+}
+#hearts{font-size:23px}
+#message{font-size:12px}
+#board{
+ flex:1;min-height:0;width:100%;
+ display:block;border-radius:22px;
+ background:linear-gradient(150deg,#d8f6b8,#9edb86);
+ box-shadow:0 5px 20px #397d4640;
+ touch-action:manipulation;
+}
+footer{display:flex;gap:8px;padding-bottom:5px}
+footer button{flex:1;font-size:15px}
+.mainbtn{background:#328b50;color:white}
+#overlay{
+ position:absolute;inset:0;
+ background:#164a2d88;
+ display:none;align-items:center;
+ justify-content:center;padding:20px;
+}
+.panel{
+ width:100%;max-width:330px;
+ background:#f3ffe9;border-radius:24px;
+ padding:25px;text-align:center;
+ border:3px solid white;
+}
+.panel h2{color:#328b50}
+.panel button{background:#328b50;color:white}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+<header>
+ <span>🐛 Worm Escape</span>
+ <span id="level">BOSQICH 1</span>
+ <button id="sound">🔊</button>
+</header>
+
+<div id="stats">
+ <span id="hearts">❤️❤️❤️</span>
+ <span id="message">Qurtchalarni chiqaring!</span>
+</div>
+
+<canvas id="board"></canvas>
+
+<footer>
+ <button id="hint">💡 Yordam</button>
+ <button id="restart">↻ Qayta</button>
+ <button class="mainbtn" id="newgame">Yangi o‘yin</button>
+</footer>
+
+</div>
+
+<div id="overlay">
+ <div class="panel">
+  <h2 id="title">Ajoyib!</h2>
+  <p id="description">Bosqich tugadi!</p>
+  <button id="next">Davom etish</button>
+ </div>
+</div>
+
+<script>
+"use strict";
+
+const canvas=document.getElementById("board");
+const ctx=canvas.getContext("2d");
+
+const levelText=document.getElementById("level");
+const heartsText=document.getElementById("hearts");
+const message=document.getElementById("message");
+
+const overlay=document.getElementById("overlay");
+const title=document.getElementById("title");
+const description=document.getElementById("description");
+const nextButton=document.getElementById("next");
+
+const colors=[
+ "#ed4e59","#368be8","#43a85b",
+ "#a44ce0","#f39b32","#ed6d9b"
+];
+
+let cols=10;
+let rows=14;
+let cell=20;
+let ox=0,oy=0;
+
+let worms=[];
+let level=1;
+let lives=3;
+let muted=false;
+let selected=-1;
+let locked=false;
+let audio=null;
+
+function sound(type){
+ if(muted)return;
+
+ try{
+  audio=audio||new(window.AudioContext||
+  window.webkitAudioContext)();
+
+  if(audio.state==="suspended")audio.resume();
+
+  const osc=audio.createOscillator();
+  const gain=audio.createGain();
+
+  osc.connect(gain);
+  gain.connect(audio.destination);
+
+  let notes=type==="bad"?[180,120]:
+            type==="win"?[500,650,800]:
+            [350,500];
+
+  const t=audio.currentTime;
+
+  notes.forEach((n,i)=>{
+   osc.frequency.setValueAtTime(n,t+i*.09);
+  });
+
+  gain.gain.setValueAtTime(.001,t);
+  gain.gain.exponentialRampToValueAtTime(.08,t+.02);
+  gain.gain.exponentialRampToValueAtTime(
+   .001,t+notes.length*.1+.05
+  );
+
+  osc.start(t);
+  osc.stop(t+notes.length*.1+.1);
+ }catch(e){}
+}
+
+function random(n){
+ return Math.floor(Math.random()*n);
+}
+
+function occupiedAt(x,y,active){
+ return active.some(w=>
+  w.alive&&w.cells.some(p=>p.x===x&&p.y===y)
+ );
+}
+
+function canExit(w,active){
+ let x=w.cells[0].x+w.dx;
+ let y=w.cells[0].y+w.dy;
+
+ while(x>=0&&x<cols&&y>=0&&y<rows){
+  if(occupiedAt(x,y,active.filter(a=>a!==w))){
+   return false;
+  }
+  x+=w.dx;
+  y+=w.dy;
+ }
+ return true;
+}
+
+// Boshqotirma yechilishini oldindan tekshirish
+function solvable(list){
+ const active=list.map(w=>({
+  ...w,
+  cells:w.cells.map(p=>({...p})),
+  alive:true
+ }));
+
+ let changed=true;
+
+ while(changed){
+  changed=false;
+
+  for(const w of active){
+   if(w.alive&&canExit(w,active)){
+    w.alive=false;
+    changed=true;
+   }
+  }
+ }
+
+ return active.every(w=>!w.alive);
+}
+
+function createPuzzle(){
+ const directions=[
+  {x:1,y:0},{x:-1,y:0},
+  {x:0,y:1},{x:0,y:-1}
+ ];
+
+ for(let attempt=0;attempt<250;attempt++){
+
+  let list=[];
+  let occupied=new Set();
+
+  const amount=Math.min(12+level,24);
+
+  for(let i=0;i<amount;i++){
+
+   let placed=false;
+
+   for(let tries=0;tries<80;tries++){
+
+    const d=directions[random(4)];
+    const len=2+random(3);
+
+    let hx=random(cols);
+    let hy=random(rows);
+
+    let cells=[];
+
+    for(let j=0;j<len;j++){
+     cells.push({
+      x:hx-d.x*j,
+      y:hy-d.y*j
+     });
+    }
+
+    if(cells.some(p=>
+     p.x<0||p.y<0||p.x>=cols||p.y>=rows
+    ))continue;
+
+    if(cells.some(p=>
+     occupied.has(p.x+","+p.y)
+    ))continue;
+
+    cells.forEach(p=>
+     occupied.add(p.x+","+p.y)
+    );
+
+    list.push({
+     id:i,
+     cells:cells,
+     dx:d.x,
+     dy:d.y,
+     color:colors[random(colors.length)],
+     alive:true
+    });
+
+    placed=true;
+    break;
+   }
+
+   if(!placed)break;
+  }
+
+  if(list.length>=7&&solvable(list)){
+   return list;
+  }
+ }
+
+ // Agar tasodifiy joylashuv topilmasa,
+ // oddiy yechiladigan zaxira boshqotirma.
+ return [
+  {id:0,cells:[{x:2,y:2},{x:1,y:2}],dx:-1,dy:0,color:colors[0],alive:true},
+  {id:1,cells:[{x:6,y:4},{x:5,y:4}],dx:1,dy:0,color:colors[1],alive:true},
+  {id:2,cells:[{x:3,y:7},{x:3,y:8}],dx:0,dy:-1,color:colors[2],alive:true},
+  {id:3,cells:[{x:7,y:10},{x:7,y:11}],dx:0,dy:1,color:colors[3],alive:true},
+  {id:4,cells:[{x:5,y:6},{x:4,y:6}],dx:1,dy:0,color:colors[4],alive:true},
+  {id:5,cells:[{x:1,y:11},{x:2,y:11}],dx:-1,dy:0,color:colors[5],alive:true}
+ ];
+}
+
+function resize(){
+ const rect=canvas.getBoundingClientRect();
+ const dpr=Math.min(window.devicePixelRatio||1,1.5);
+
+ canvas.width=Math.max(1,Math.round(rect.width*dpr));
+ canvas.height=Math.max(1,Math.round(rect.height*dpr));
+
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+
+ cell=Math.min(
+  (rect.width-24)/cols,
+  (rect.height-24)/rows
+ );
+
+ ox=(rect.width-cols*cell)/2;
+ oy=(rect.height-rows*cell)/2;
+
+ draw();
+}
+
+function circle(x,y,r,color){
+ ctx.beginPath();
+ ctx.arc(x,y,r,0,Math.PI*2);
+ ctx.fillStyle=color;
+ ctx.fill();
+}
+
+function draw(){
+ const width=canvas.clientWidth;
+ const height=canvas.clientHeight;
+
+ ctx.clearRect(0,0,width,height);
+
+ // Yengil fon nuqtalari
+ ctx.fillStyle="#ffffff25";
+
+ for(let y=10;y<height;y+=32){
+  for(let x=10;x<width;x+=32){
+   circle(x,y,1,"#ffffff30");
+  }
+ }
+
+ // Qurtchalar
+ for(const w of worms){
+
+  if(!w.alive)continue;
+
+  for(let i=w.cells.length-1;i>=0;i--){
+
+   const p=w.cells[i];
+
+   const x=ox+(p.x+.5)*cell;
+   const y=oy+(p.y+.5)*cell;
+
+   circle(x+1,y+2,cell*.39,"#285c3b35");
+   circle(x,y,cell*.37,w.color);
+
+   circle(
+    x-cell*.10,
+    y-cell*.12,
+    cell*.09,
+    "#ffffff55"
+   );
+  }
+
+  // Bosh va ko‘zlar
+  const h=w.cells[0];
+
+  const x=ox+(h.x+.5)*cell;
+  const y=oy+(h.y+.5)*cell;
+
+  const px=-w.dy;
+  const py=w.dx;
+
+  circle(
+   x+w.dx*cell*.12+px*cell*.12,
+   y+w.dy*cell*.12+py*cell*.12,
+   cell*.075,"white"
+  );
+
+  circle(
+   x+w.dx*cell*.12-px*cell*.12,
+   y+w.dy*cell*.12-py*cell*.12,
+   cell*.075,"white"
+  );
+
+  circle(
+   x+w.dx*cell*.15+px*cell*.13,
+   y+w.dy*cell*.15+py*cell*.13,
+   cell*.035,"#183b2b"
+  );
+
+  circle(
+   x+w.dx*cell*.15-px*cell*.13,
+   y+w.dy*cell*.15-py*cell*.13,
+   cell*.035,"#183b2b"
+  );
+
+  if(selected===w.id){
+   ctx.beginPath();
+   ctx.arc(x,y,cell*.47,0,Math.PI*2);
+   ctx.strokeStyle="white";
+   ctx.lineWidth=3;
+   ctx.stroke();
+  }
+ }
+}
+
+function update(){
+ heartsText.textContent=
+  "❤️".repeat(lives)+"♡".repeat(3-lives);
+
+ const left=worms.filter(w=>w.alive).length;
+
+ message.textContent=left+" ta qurtcha qoldi";
+ levelText.textContent="BOSQICH "+level;
+}
+
+function showPanel(t,d,b,action){
+ title.textContent=t;
+ description.textContent=d;
+ nextButton.textContent=b;
+
+ nextButton.onclick=()=>{
+  overlay.style.display="none";
+  action();
+ };
+
+ overlay.style.display="flex";
+}
+
+function finishWorm(w){
+
+ if(locked||!w.alive)return;
+
+ if(!canExit(w,worms)){
+  lives--;
+  sound("bad");
+  update();
+  message.textContent="Yo‘l band! Boshqasini tanlang.";
+  selected=-1;
+  draw();
+
+  if(lives<=0){
+   locked=true;
+
+   showPanel(
+    "Jonlar tugadi!",
+    "Bosqichni yana bir marta sinab ko‘ring.",
+    "Qayta boshlash",
+    ()=>{
+     lives=3;
+     locked=false;
+     startLevel();
+    }
+   );
+  }
+  return;
+ }
+
+ locked=true;
+ selected=-1;
+ w.alive=false;
+
+ sound("ok");
+ update();
+ draw();
+
+ setTimeout(()=>{
+  locked=false;
+
+  if(worms.every(a=>!a.alive)){
+   sound("win");
+
+   showPanel(
+    "AJOYIB! 🎉",
+    "Siz "+level+"-bosqichni tugatdingiz!",
+    "Keyingi bosqich",
+    ()=>{
+     level++;
+     lives=3;
+     startLevel();
+    }
+   );
+  }else{
+   message.textContent="Zo‘r! Davom eting.";
+  }
+ },180);
+}
+
+function tap(e){
+ if(locked||overlay.style.display==="flex")return;
+
+ const rect=canvas.getBoundingClientRect();
+
+ const x=(e.clientX-rect.left-ox)/cell;
+ const y=(e.clientY-rect.top-oy)/cell;
+
+ let best=null;
+ let distance=Infinity;
+
+ for(const w of worms){
+  if(!w.alive)continue;
+
+  for(const p of w.cells){
+   const dist=(p.x+.5-x)**2+(p.y+.5-y)**2;
+
+   if(dist<distance){
+    distance=dist;
+    best=w;
+   }
+  }
+ }
+
+ if(best&&distance<1.5){
+  finishWorm(best);
+ }
+}
+
+function startLevel(){
+ worms=createPuzzle();
+ selected=-1;
+ locked=false;
+ update();
+ draw();
+}
+
+canvas.addEventListener("pointerdown",tap);
+
+document.getElementById("restart").onclick=()=>{
+ lives=3;
+ startLevel();
+ sound("tap");
+};
+
+document.getElementById("newgame").onclick=()=>{
+ level=1;
+ lives=3;
+ startLevel();
+ sound("tap");
+};
+
+document.getElementById("sound").onclick=e=>{
+ muted=!muted;
+ e.target.textContent=muted?"🔇":"🔊";
+ if(!muted)sound("tap");
+};
+
+document.getElementById("hint").onclick=()=>{
+ const w=worms.find(a=>
+  a.alive&&canExit(a,worms)
+ );
+
+ if(w){
+  selected=w.id;
+  message.textContent="Oq halqadagi qurtchani bosing!";
+  sound("tap");
+  draw();
+ }else{
+  message.textContent="Boshqa yo‘lni tekshiring!";
+ }
+};
+
+window.addEventListener("resize",resize);
+
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){
+  selected=-1;
+ }
+});
+
+startLevel();
+resize();
+
+</script>
+</body>
+</html>
